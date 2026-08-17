@@ -1,0 +1,2225 @@
+@import "bootstrap/dist/css/bootstrap.min.css";
+@import "leaflet/dist/leaflet.css";
+@import "bootstrap-icons/font/bootstrap-icons.css";
+
+:root {
+    /* Official Shine Star Marketing brand palette */
+    --ssm-royal-blue: #002051;
+    --ssm-deep-navy: #052D64;
+    --ssm-gold: #FBAB03;
+    --ssm-gold-light: #FDF1D9;
+    --ssm-white: #F8FBFC;
+
+    /* Back-compat aliases — existing component CSS (e.g. the notification bell) reads these */
+    --ssm-primary: var(--ssm-royal-blue);
+
+    /* ---- Semantic system (added for the 2026-08 admin UI refresh) ----
+       Muted/professional tones, not Bootstrap's default saturated red/green — used anywhere a
+       status/feedback color is needed (badges, alerts, form validation) so new admin UI has a
+       ready-made palette instead of reaching for raw Bootstrap defaults or one-off hex values. */
+    --ssm-success: #1f9d55;
+    --ssm-success-light: #e6f6ec;
+    --ssm-warning: #d97a06;
+    --ssm-warning-light: #fdf1e0;
+    --ssm-danger: #c0392b;
+    --ssm-danger-light: #fbeae8;
+    --ssm-info: #2563a8;
+    --ssm-info-light: #e8f1fb;
+
+    /* Text-safe gold: --ssm-gold (#FBAB03) is ~1.6:1 contrast on white — fine for backgrounds/
+       badges/icons, but fails WCAG AA as actual text color. Use this darker shade instead for any
+       gold-colored text/link on a light background (~4.6:1 contrast). */
+    --ssm-gold-text: #8a5a00;
+
+    /* Neutral surface/border/text tokens — gives new admin markup a named scale instead of
+       scattered literal hex greys. */
+    --ssm-surface: #ffffff;
+    --ssm-surface-muted: #f8f9fb;
+    --ssm-border: #e5e9f0;
+    --ssm-text: #1f2937;
+    --ssm-text-muted: #6b7280;
+    --ssm-text-subtle: #9aa5b1;
+}
+
+body {
+    min-height: 100vh;
+    background-color: var(--ssm-white);
+}
+
+[x-cloak] {
+    display: none !important;
+}
+
+/* ================================================================== */
+/* Brand re-theme — retint Bootstrap's compiled component variables    */
+/* so every existing .btn-primary / .badge / .form-control / .card /   */
+/* .table / .pagination / .nav-pills / .dropdown across every admin   */
+/* page picks up the brand palette automatically, no per-page edits.  */
+/* ================================================================== */
+
+:root, [data-bs-theme="light"] {
+    --bs-primary: var(--ssm-royal-blue);
+    --bs-primary-rgb: 0, 32, 81;
+    --bs-link-color: var(--ssm-royal-blue);
+    --bs-link-color-rgb: 0, 32, 81;
+    --bs-link-hover-color: var(--ssm-deep-navy);
+    --bs-link-hover-color-rgb: 5, 45, 100;
+    --bs-body-bg: var(--ssm-white);
+}
+
+a { color: var(--ssm-royal-blue); }
+a:hover { color: var(--ssm-deep-navy); }
+
+.btn-primary {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: var(--ssm-royal-blue);
+    --bs-btn-border-color: var(--ssm-royal-blue);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: var(--ssm-deep-navy);
+    --bs-btn-hover-border-color: var(--ssm-deep-navy);
+    --bs-btn-active-bg: var(--ssm-deep-navy);
+    --bs-btn-active-border-color: var(--ssm-deep-navy);
+    --bs-btn-disabled-bg: var(--ssm-royal-blue);
+    --bs-btn-disabled-border-color: var(--ssm-royal-blue);
+    --bs-btn-focus-shadow-rgb: 0, 32, 81;
+}
+
+.btn-outline-primary {
+    --bs-btn-color: var(--ssm-royal-blue);
+    --bs-btn-border-color: var(--ssm-royal-blue);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: var(--ssm-royal-blue);
+    --bs-btn-hover-border-color: var(--ssm-royal-blue);
+    --bs-btn-active-bg: var(--ssm-royal-blue);
+    --bs-btn-active-border-color: var(--ssm-royal-blue);
+    --bs-btn-focus-shadow-rgb: 0, 32, 81;
+}
+
+/* Gold is reserved for highlights/CTAs, never a full component recolor */
+.btn-gold {
+    --bs-btn-color: var(--ssm-deep-navy);
+    --bs-btn-bg: var(--ssm-gold);
+    --bs-btn-border-color: var(--ssm-gold);
+    --bs-btn-hover-color: var(--ssm-deep-navy);
+    --bs-btn-hover-bg: #e29a03;
+    --bs-btn-hover-border-color: #e29a03;
+    --bs-btn-active-bg: #e29a03;
+    --bs-btn-active-border-color: #e29a03;
+    font-weight: 600;
+}
+
+.text-primary { color: var(--ssm-royal-blue) !important; }
+.bg-primary { background-color: var(--ssm-royal-blue) !important; }
+.border-primary { border-color: var(--ssm-royal-blue) !important; }
+
+.badge.text-bg-primary { background-color: var(--ssm-royal-blue) !important; }
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--ssm-royal-blue);
+    box-shadow: 0 0 0 .25rem rgba(0, 32, 81, .15);
+}
+
+.form-check-input:checked {
+    background-color: var(--ssm-royal-blue);
+    border-color: var(--ssm-royal-blue);
+}
+
+.form-check-input:focus {
+    border-color: var(--ssm-royal-blue);
+    box-shadow: 0 0 0 .25rem rgba(0, 32, 81, .15);
+}
+
+.form-switch .form-check-input:checked {
+    background-color: var(--ssm-gold);
+    border-color: var(--ssm-gold);
+}
+
+.nav-pills .nav-link.active,
+.nav-pills .show > .nav-link {
+    background-color: var(--ssm-royal-blue);
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--ssm-text-muted);
+    font-weight: 500;
+}
+
+.nav-tabs .nav-link:hover {
+    border-color: transparent;
+    color: var(--ssm-royal-blue);
+}
+
+.nav-tabs .nav-link.active {
+    background: none;
+    border-color: transparent transparent var(--ssm-royal-blue);
+    color: var(--ssm-royal-blue);
+    font-weight: 600;
+}
+
+.page-link {
+    color: var(--ssm-royal-blue);
+}
+
+.page-item.active .page-link {
+    background-color: var(--ssm-royal-blue);
+    border-color: var(--ssm-royal-blue);
+}
+
+.page-link:focus {
+    box-shadow: 0 0 0 .25rem rgba(0, 32, 81, .15);
+}
+
+.dropdown-item.active,
+.dropdown-item:active {
+    background-color: var(--ssm-royal-blue);
+}
+
+.list-group-item.active {
+    background-color: var(--ssm-royal-blue);
+    border-color: var(--ssm-royal-blue);
+}
+
+.spinner-border.text-primary,
+.progress-bar {
+    background-color: var(--ssm-royal-blue);
+}
+
+/* ---------------------------------------------------------------- */
+/* Global admin card / table polish — premium, minimal, consistent   */
+/* ---------------------------------------------------------------- */
+
+#admin-wrapper .card {
+    border: none;
+    border-radius: 1rem;
+    box-shadow: 0 2px 14px rgba(5, 45, 100, .06);
+}
+
+#admin-wrapper .card .card-header {
+    background: #fff;
+    border-bottom: 1px solid #eef0f4;
+    font-weight: 600;
+    border-top-left-radius: 1rem !important;
+    border-top-right-radius: 1rem !important;
+}
+
+#admin-wrapper .table {
+    --bs-table-hover-bg: rgba(0, 32, 81, .04);
+    vertical-align: middle;
+}
+
+#admin-wrapper .table thead th {
+    text-transform: uppercase;
+    font-size: .72rem;
+    letter-spacing: .05em;
+    color: #6b7280;
+    background: #fbfcfe;
+    border-bottom-width: 1px;
+    font-weight: 700;
+}
+
+#admin-wrapper .btn {
+    border-radius: .6rem;
+}
+
+#admin-wrapper .form-control,
+#admin-wrapper .form-select {
+    border-radius: .6rem;
+}
+
+/* ---------------------------------------------------------------- */
+/* Admin topbar notification bell                                    */
+/* ---------------------------------------------------------------- */
+
+.notif-bell {
+    position: relative;
+}
+
+.notif-bell__trigger,
+.ssm-topbar__site-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1px solid #dee2e6;
+    background: #fff;
+    color: #495057;
+    font-size: 1.05rem;
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.notif-bell__trigger:hover,
+.notif-bell__trigger:focus-visible,
+.ssm-topbar__site-btn:hover,
+.ssm-topbar__site-btn:focus-visible {
+    background: var(--ssm-gold-light);
+    border-color: var(--ssm-gold);
+    color: #7a5c1e;
+    outline: none;
+}
+
+.notif-bell__badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--ssm-primary), #0a58ca);
+    color: #fff;
+    font-size: .68rem;
+    line-height: 18px;
+    text-align: center;
+    font-weight: 600;
+    box-shadow: 0 0 0 2px #fff;
+}
+
+.notif-bell__panel {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 10px);
+    width: 380px;
+    max-width: calc(100vw - 2rem);
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, .14), 0 2px 8px rgba(15, 23, 42, .08);
+    border: 1px solid rgba(201, 162, 75, .18);
+    overflow: hidden;
+    z-index: 1060;
+}
+
+.notif-bell__panel-enter { transition: opacity .18s ease-out, transform .18s ease-out; }
+.notif-bell__panel-enter-start { opacity: 0; transform: translateY(-6px) scale(.98); }
+.notif-bell__panel-enter-end { opacity: 1; transform: translateY(0) scale(1); }
+.notif-bell__panel-leave { transition: opacity .12s ease-in, transform .12s ease-in; }
+.notif-bell__panel-leave-start { opacity: 1; transform: translateY(0) scale(1); }
+.notif-bell__panel-leave-end { opacity: 0; transform: translateY(-6px) scale(.98); }
+
+.notif-bell__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .9rem 1.1rem;
+    border-bottom: 1px solid #f1f2f4;
+    background: linear-gradient(180deg, #fff, #fbfbfc);
+}
+
+.notif-bell__title {
+    font-weight: 700;
+    font-size: .95rem;
+    color: #1f2937;
+    letter-spacing: .01em;
+}
+
+.notif-bell__mark-all {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--ssm-gold-text);
+    transition: color .15s ease;
+}
+
+.notif-bell__mark-all:hover:not(:disabled) {
+    color: #a5822f;
+    text-decoration: underline;
+}
+
+.notif-bell__mark-all:disabled {
+    color: #adb5bd;
+    cursor: default;
+}
+
+.notif-bell__list {
+    max-height: 360px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--ssm-gold) transparent;
+}
+
+.notif-bell__list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.notif-bell__list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.notif-bell__list::-webkit-scrollbar-thumb {
+    background-color: var(--ssm-gold);
+    border-radius: 999px;
+}
+
+.notif-bell__item {
+    display: flex;
+    align-items: flex-start;
+    gap: .65rem;
+    width: 100%;
+    text-align: left;
+    padding: .7rem 1.1rem;
+    border: none;
+    border-bottom: 1px solid #f4f5f6;
+    background: #fff;
+    transition: background-color .15s ease;
+    position: relative;
+}
+
+.notif-bell__item:hover,
+.notif-bell__item:focus-visible {
+    background: #f8f9fb;
+    outline: none;
+}
+
+.notif-bell__item.is-unread {
+    background: linear-gradient(90deg, rgba(13, 110, 253, .05), rgba(201, 162, 75, .05));
+}
+
+.notif-bell__item.is-unread:hover {
+    background: linear-gradient(90deg, rgba(13, 110, 253, .09), rgba(201, 162, 75, .09));
+}
+
+.notif-bell__icon {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--ssm-gold-light);
+    color: var(--ssm-gold);
+    font-size: .95rem;
+}
+
+.notif-bell__item.is-unread .notif-bell__icon {
+    background: var(--ssm-primary);
+    color: #fff;
+}
+
+.notif-bell__content {
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.notif-bell__item-title {
+    display: block;
+    font-size: .85rem;
+    font-weight: 500;
+    color: #495057;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.notif-bell__item.is-unread .notif-bell__item-title {
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.notif-bell__item-preview {
+    display: block;
+    font-size: .78rem;
+    color: #868e96;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 1px;
+}
+
+.notif-bell__item-time {
+    display: block;
+    font-size: .7rem;
+    color: #adb5bd;
+    margin-top: 3px;
+}
+
+.notif-bell__dot {
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ssm-gold);
+    margin-top: 6px;
+    box-shadow: 0 0 0 3px var(--ssm-gold-light);
+}
+
+.notif-bell__empty {
+    padding: 2rem 1.1rem;
+    text-align: center;
+    color: #adb5bd;
+    font-size: .85rem;
+}
+
+.notif-bell__footer {
+    position: sticky;
+    bottom: 0;
+    padding: .7rem 1.1rem;
+    background: #fbfbfc;
+    border-top: 1px solid #f1f2f4;
+    text-align: center;
+}
+
+.notif-bell__view-all {
+    font-size: .82rem;
+    font-weight: 600;
+    color: var(--ssm-primary);
+    text-decoration: none;
+}
+
+.notif-bell__view-all:hover {
+    color: var(--ssm-deep-navy);
+    text-decoration: underline;
+}
+
+/* ================================================================== */
+/* Admin shell — sidebar (collapsible + mobile off-canvas) + topbar    */
+/* ================================================================== */
+
+.ssm-admin-shell {
+    position: relative;
+}
+
+.ssm-sidebar {
+    width: 260px;
+    min-height: 100vh;
+    flex-shrink: 0;
+    background: linear-gradient(180deg, var(--ssm-deep-navy), var(--ssm-royal-blue) 70%);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    transition: width .2s ease;
+    position: relative;
+    z-index: 1030;
+}
+
+.ssm-sidebar__brand {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.15rem 1.1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+
+.ssm-sidebar__brand-link {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    color: #fff;
+    text-decoration: none;
+    min-width: 0;
+}
+
+/* Keep the brand name white on hover — the global `a:hover` rule re-tints links to deep navy,
+   which disappears against the dark blue sidebar background. */
+.ssm-sidebar__brand-link:hover,
+.ssm-sidebar__brand-link:focus-visible,
+.ssm-sidebar__brand-link:active {
+    color: #fff;
+}
+
+.ssm-sidebar__brand-mark {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: .6rem;
+    background: var(--ssm-gold);
+    color: var(--ssm-deep-navy);
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+}
+
+.ssm-sidebar__brand-text {
+    font-weight: 700;
+    font-size: 1.02rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ssm-sidebar__collapse-btn {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, .18);
+    background: transparent;
+    color: rgba(255, 255, 255, .75);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .75rem;
+    transition: background-color .15s ease, color .15s ease;
+}
+
+.ssm-sidebar__collapse-btn:hover {
+    background: rgba(255, 255, 255, .12);
+    color: #fff;
+}
+
+.ssm-sidebar__nav {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: .9rem .7rem 1.5rem;
+}
+
+.ssm-nav {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: .15rem;
+}
+
+.ssm-nav__link,
+.ssm-nav__toggle {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    width: 100%;
+    padding: .58rem .75rem;
+    border-radius: .6rem;
+    color: rgba(255, 255, 255, .72);
+    text-decoration: none;
+    font-size: .875rem;
+    font-weight: 500;
+    border: none;
+    background: transparent;
+    border-left: 3px solid transparent;
+    transition: background-color .15s ease, color .15s ease, border-color .15s ease;
+}
+
+.ssm-nav__link i,
+.ssm-nav__toggle i.ssm-nav__icon {
+    flex-shrink: 0;
+    font-size: 1.05rem;
+    width: 20px;
+    text-align: center;
+    transition: transform .15s ease;
+}
+
+.ssm-nav__link:hover,
+.ssm-nav__toggle:hover {
+    background: rgba(255, 255, 255, .08);
+    color: #fff;
+}
+
+.ssm-nav__link:hover i,
+.ssm-nav__toggle:hover i.ssm-nav__icon {
+    transform: translateX(2px);
+}
+
+.ssm-nav__link.is-active {
+    background: rgba(251, 171, 3, .14);
+    color: #fff;
+    border-left-color: var(--ssm-gold);
+    font-weight: 600;
+}
+
+/* Parent submenu toggle (CRM/CMS) picks up the same highlight treatment as a plain active link
+   whenever the user is on one of its child pages, even while the submenu itself is collapsed —
+   without this, a collapsed "CMS" toggle gives no visual clue you're inside that section. */
+.ssm-nav__toggle.is-active {
+    background: rgba(251, 171, 3, .14);
+    color: #fff;
+    border-left-color: var(--ssm-gold);
+    font-weight: 600;
+}
+
+@keyframes ssm-submenu-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.ssm-nav__toggle[aria-expanded="true"] + .collapse.show .ssm-nav__submenu {
+    animation: ssm-submenu-fade .18s ease;
+}
+
+.ssm-nav__label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ssm-nav__toggle {
+    justify-content: space-between;
+}
+
+.ssm-nav__toggle-chevron {
+    margin-left: auto;
+    font-size: .7rem;
+    transition: transform .15s ease;
+}
+
+.ssm-nav__toggle[aria-expanded="true"] .ssm-nav__toggle-chevron {
+    transform: rotate(180deg);
+}
+
+.ssm-nav__submenu {
+    list-style: none;
+    margin: .15rem 0 .3rem;
+    padding: 0 0 0 1.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: .1rem;
+}
+
+.ssm-nav__submenu .ssm-nav__link {
+    padding: .45rem .6rem;
+    font-size: .82rem;
+}
+
+.ssm-sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 45, 100, .45);
+    z-index: 1020;
+}
+
+/* Collapsed (icon-only) desktop state */
+.ssm-admin-shell.is-collapsed .ssm-sidebar {
+    width: 76px;
+}
+
+.ssm-admin-shell.is-collapsed .ssm-sidebar__brand-text,
+.ssm-admin-shell.is-collapsed .ssm-nav__label,
+.ssm-admin-shell.is-collapsed .ssm-nav__toggle-chevron,
+.ssm-admin-shell.is-collapsed .ssm-nav__submenu {
+    display: none;
+}
+
+.ssm-admin-shell.is-collapsed .ssm-sidebar__brand {
+    justify-content: center;
+}
+
+.ssm-admin-shell.is-collapsed .ssm-sidebar__collapse-btn {
+    position: absolute;
+    right: -12px;
+    top: 1.3rem;
+    background: var(--ssm-deep-navy);
+}
+
+.ssm-topbar {
+    background: #fff;
+    border-bottom: 1px solid #eef0f4;
+    padding: .7rem 1.5rem;
+    position: sticky;
+    top: 0;
+    z-index: 1025;
+}
+
+.ssm-topbar__menu-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: .6rem;
+    border: 1px solid #dee2e6;
+    background: #fff;
+    color: var(--ssm-royal-blue);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ssm-topbar__title {
+    font-weight: 700;
+    color: #1f2937;
+    font-size: 1.02rem;
+}
+
+.ssm-user-btn {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    border: 1px solid #dee2e6;
+    border-radius: .6rem;
+    padding: .35rem .7rem;
+    background: #fff;
+    color: #374151;
+    font-size: .85rem;
+    font-weight: 600;
+}
+
+.ssm-user-btn:hover {
+    border-color: var(--ssm-royal-blue);
+}
+
+.ssm-user-avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--ssm-royal-blue);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .72rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+@media (max-width: 991.98px) {
+    .ssm-sidebar {
+        position: fixed;
+        inset: 0 auto 0 0;
+        transform: translateX(-100%);
+        transition: transform .22s ease;
+    }
+
+    .ssm-admin-shell.is-mobile-open .ssm-sidebar {
+        transform: translateX(0);
+    }
+
+    .ssm-admin-shell.is-collapsed .ssm-sidebar {
+        width: 260px;
+    }
+
+    .ssm-admin-shell.is-collapsed .ssm-sidebar__brand-text,
+    .ssm-admin-shell.is-collapsed .ssm-nav__label,
+    .ssm-admin-shell.is-collapsed .ssm-nav__toggle-chevron,
+    .ssm-admin-shell.is-collapsed .ssm-nav__submenu {
+        display: flex;
+    }
+
+    .ssm-admin-shell.is-collapsed .ssm-nav__toggle-chevron {
+        display: inline-block;
+    }
+}
+
+/* ---------------------------------------------------------------- */
+/* Dashboard stat cards + simple CSS bar chart                        */
+/* ---------------------------------------------------------------- */
+
+.ssm-stat-card {
+    border-radius: 1rem;
+    padding: 1.25rem 1.4rem;
+    background: #fff;
+    box-shadow: 0 2px 14px rgba(5, 45, 100, .06);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.ssm-stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px rgba(5, 45, 100, .12);
+}
+
+.ssm-stat-card__icon {
+    flex-shrink: 0;
+    width: 52px;
+    height: 52px;
+    border-radius: .85rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    background: linear-gradient(135deg, var(--ssm-royal-blue), var(--ssm-deep-navy));
+    color: #fff;
+}
+
+.ssm-stat-card__icon.is-gold {
+    background: linear-gradient(135deg, var(--ssm-gold), #e29a03);
+    color: var(--ssm-deep-navy);
+}
+
+.ssm-stat-card__icon.is-info {
+    background: linear-gradient(135deg, var(--ssm-info), #1a4d80);
+    color: #fff;
+}
+
+.ssm-stat-card__icon.is-success {
+    background: linear-gradient(135deg, var(--ssm-success), #157a41);
+    color: #fff;
+}
+
+.ssm-stat-card__icon.is-danger {
+    background: linear-gradient(135deg, var(--ssm-danger), #8f2a1f);
+    color: #fff;
+}
+
+.ssm-chart-card__header {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    margin-bottom: 1.1rem;
+}
+
+.ssm-chart-card__header i {
+    width: 32px;
+    height: 32px;
+    border-radius: .6rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--ssm-surface-muted);
+    color: var(--ssm-royal-blue);
+    font-size: .95rem;
+}
+
+/* ---- Shared empty-state block for any list/table with no rows yet ---- */
+
+.ssm-empty-state {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    color: var(--ssm-text-muted);
+}
+
+.ssm-empty-state i {
+    font-size: 2.5rem;
+    color: #d7dce4;
+    margin-bottom: .75rem;
+    display: block;
+}
+
+.ssm-empty-state p {
+    margin-bottom: 0;
+    font-size: .92rem;
+}
+
+/* ---- Form section titles (card-per-section forms: Property/Project/Blog Post forms) ---- */
+
+.ssm-form-section-title {
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    padding-bottom: .75rem;
+    margin-bottom: 1.1rem !important;
+    border-bottom: 1px solid var(--ssm-border);
+    color: var(--ssm-text);
+}
+
+.ssm-form-section-title i {
+    width: 30px;
+    height: 30px;
+    border-radius: .55rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--ssm-gold-light);
+    color: var(--ssm-gold-text);
+    font-size: .9rem;
+    flex-shrink: 0;
+}
+
+/* ---- Drag-sort list rows (Reviews, Menus, Footer widgets, CDN assets) ---- */
+
+#admin-wrapper .list-group-item {
+    border-color: var(--ssm-border);
+    transition: background-color .15s ease;
+}
+
+#admin-wrapper .list-group-item:hover {
+    background-color: var(--ssm-surface-muted);
+}
+
+#admin-wrapper [x-sort\:handle] {
+    color: var(--ssm-text-subtle);
+    font-size: 1.1rem;
+    cursor: grab;
+    transition: color .15s ease;
+}
+
+#admin-wrapper [x-sort\:handle]:hover {
+    color: var(--ssm-royal-blue);
+}
+
+.ssm-stat-card__label {
+    font-size: .8rem;
+    color: #868e96;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.ssm-stat-card__value {
+    font-size: 1.7rem;
+    font-weight: 800;
+    color: #1f2937;
+    line-height: 1.2;
+}
+
+.ssm-chart-card {
+    border-radius: 1rem;
+    background: #fff;
+    box-shadow: 0 2px 14px rgba(5, 45, 100, .06);
+    padding: 1.4rem;
+}
+
+.ssm-bar-row {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    margin-bottom: .85rem;
+}
+
+.ssm-bar-row:last-child {
+    margin-bottom: 0;
+}
+
+.ssm-bar-row__label {
+    width: 96px;
+    flex-shrink: 0;
+    font-size: .8rem;
+    color: #495057;
+    font-weight: 600;
+}
+
+.ssm-bar-row__track {
+    flex-grow: 1;
+    height: 10px;
+    border-radius: 999px;
+    background: #eef1f6;
+    overflow: hidden;
+}
+
+.ssm-bar-row__fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--ssm-royal-blue), var(--ssm-gold));
+    transition: width .4s ease;
+}
+
+.ssm-bar-row__value {
+    width: 34px;
+    flex-shrink: 0;
+    text-align: right;
+    font-size: .8rem;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+/* ---------------------------------------------------------------- */
+/* Header Template Builder — premium editor with code tabs          */
+/* and live preview panel                                            */
+/* ---------------------------------------------------------------- */
+
+.ssm-header-editor__topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .75rem 1rem;
+    background: #fff;
+    border-bottom: 1px solid #eef0f4;
+    border-radius: .85rem .85rem 0 0;
+    box-shadow: 0 1px 4px rgba(5, 45, 100, .04);
+    margin-bottom: 0;
+}
+
+.ssm-header-editor__name-input {
+    font-weight: 600;
+    min-width: 220px;
+    border-radius: .5rem !important;
+}
+
+.ssm-header-editor__grid {
+    display: flex;
+    gap: 0;
+    min-height: 600px;
+    background: var(--ssm-white);
+    border: 1px solid #eef0f4;
+    border-top: none;
+    border-radius: 0 0 .85rem .85rem;
+    overflow: hidden;
+}
+
+.ssm-header-editor__left {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #eef0f4;
+}
+
+.ssm-header-editor__right {
+    width: 45%;
+    min-width: 360px;
+    display: flex;
+    flex-direction: column;
+    background: #f8f9fc;
+}
+
+.ssm-header-editor__tabs {
+    display: flex;
+    border-bottom: 1px solid #eef0f4;
+    background: #fff;
+    padding: 0 .5rem;
+}
+
+.ssm-header-editor__tab {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .65rem .9rem;
+    font-size: .82rem;
+    font-weight: 600;
+    color: #6b7280;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: color .15s ease, border-color .15s ease;
+    white-space: nowrap;
+}
+
+.ssm-header-editor__tab:hover {
+    color: var(--ssm-royal-blue);
+}
+
+.ssm-header-editor__tab.is-active {
+    color: var(--ssm-royal-blue);
+    border-bottom-color: var(--ssm-royal-blue);
+}
+
+.ssm-header-editor__content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    background: #16171f;
+}
+
+.ssm-header-editor__code-area {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.ssm-header-editor__settings {
+    padding: .25rem;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.ssm-header-editor__settings .form-label {
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: .25rem;
+}
+
+.ssm-header-editor__preview-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .6rem 1rem;
+    border-bottom: 1px solid #eef0f4;
+    background: #fff;
+}
+
+.ssm-header-editor__device-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: .5rem;
+    border: 1px solid #dee2e6;
+    background: #fff;
+    color: #6b7280;
+    font-size: .95rem;
+    cursor: pointer;
+    transition: all .15s ease;
+}
+
+.ssm-header-editor__device-btn:hover {
+    border-color: var(--ssm-royal-blue);
+    color: var(--ssm-royal-blue);
+}
+
+.ssm-header-editor__device-btn.is-active {
+    background: var(--ssm-royal-blue);
+    border-color: var(--ssm-royal-blue);
+    color: #fff;
+}
+
+.ssm-header-editor__preview-frame {
+    flex: 1;
+    overflow: auto;
+    padding: 1.5rem;
+    background: #f0f2f6;
+}
+
+.ssm-header-editor__device-wrapper {
+    margin: 0 auto;
+    transition: width .25s ease;
+    overflow: hidden;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(5, 45, 100, .12);
+    background: #fff;
+}
+
+.ssm-header-editor__device-wrapper.is-desktop {
+    width: 100%;
+    /* Ensures the iframe's own viewport is wide enough that the template's mobile @media
+       breakpoint (default 991px) doesn't fire just because the admin panel itself is narrow.
+       .preview-frame scrolls horizontally on smaller admin windows, same as tablet/mobile. */
+    min-width: 1100px;
+}
+
+.ssm-header-editor__device-wrapper.is-tablet {
+    width: 768px;
+}
+
+.ssm-header-editor__device-wrapper.is-mobile {
+    width: 375px;
+}
+
+/*
+ * The preview renders in a sandboxed <iframe srcdoc> rather than markup injected straight into
+ * the admin page. That is what makes it work at all: templates can set position:fixed (e.g. the
+ * "sticky" setting), and without an iframe boundary that escapes the preview box entirely and
+ * pins over the real admin page instead of showing inside it. An iframe also gives the preview
+ * its own viewport, so @media breakpoints in the template CSS respond to the Desktop/Tablet/
+ * Mobile toggle (which resizes .device-wrapper) instead of the admin browser window's width.
+ */
+.ssm-header-editor__preview-iframe {
+    display: block;
+    width: 100%;
+    height: 320px;
+    border: 0;
+    background: #fff;
+}
+
+@media (max-width: 1200px) {
+    .ssm-header-editor__grid {
+        flex-direction: column;
+    }
+
+    .ssm-header-editor__right {
+        width: 100%;
+        min-width: 0;
+        border-left: none;
+        border-top: 1px solid #eef0f4;
+    }
+
+    .ssm-header-editor__left {
+        border-right: none;
+    }
+}
+
+/* ---------------------------------------------------------------- */
+/* Row-action button groups (Edit / Hide / Publish / Delete, etc.)   */
+/* Bootstrap's .btn-group fuses buttons edge-to-edge on purpose      */
+/* (a segmented control); every admin table uses it for logically   */
+/* separate row actions instead, so give each button its own gap    */
+/* and full rounded corners rather than a fused strip.               */
+/* ---------------------------------------------------------------- */
+
+#admin-wrapper .btn-group > .btn,
+#admin-wrapper .btn-group > form > .btn {
+    margin-left: .4rem;
+    border-radius: .5rem !important;
+}
+
+#admin-wrapper .btn-group > .btn:first-child,
+#admin-wrapper .btn-group > form:first-child > .btn {
+    margin-left: 0;
+}
+
+/* ---------------------------------------------------------------- */
+/* Topbar spacing polish — breathing room between the bell and the  */
+/* user menu, plus a properly offset + styled user dropdown panel.  */
+/* ---------------------------------------------------------------- */
+
+.ssm-topbar .notif-bell {
+    margin-right: .85rem;
+}
+
+.ssm-topbar .dropdown-menu {
+    top: calc(100% + 10px) !important;
+    border-radius: .85rem;
+    border: 1px solid rgba(0, 32, 81, .08);
+    box-shadow: 0 12px 32px rgba(15, 23, 42, .14), 0 2px 8px rgba(15, 23, 42, .08);
+    min-width: 180px;
+}
+
+.ssm-topbar .dropdown-item {
+    border-radius: .5rem;
+    padding: .5rem .75rem;
+    font-size: .875rem;
+}
+
+.ssm-topbar .dropdown-item:hover {
+    background-color: var(--ssm-gold-light);
+    color: var(--ssm-deep-navy);
+}
+
+/* ---------------------------------------------------------------- */
+/* CRM Chat — contact-details icon/modal + premium reply input       */
+/* ---------------------------------------------------------------- */
+
+.ssm-contact-btn {
+    flex-shrink: 0;
+    box-sizing: border-box;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    margin: 0;
+    line-height: 1;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    background: linear-gradient(135deg, var(--ssm-gold-light), #f2dfb0);
+    color: var(--ssm-royal-blue);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    box-shadow: 0 2px 6px rgba(5, 45, 100, .12), 0 0 0 1px rgba(0, 32, 81, .08);
+    cursor: pointer;
+    transition: background-color .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease;
+}
+
+.ssm-contact-btn:hover,
+.ssm-contact-btn:focus-visible {
+    background: linear-gradient(135deg, var(--ssm-gold), #e29a03);
+    color: #fff;
+    transform: translateY(-1px) scale(1.08);
+    box-shadow: 0 6px 14px rgba(5, 45, 100, .22), 0 0 0 1px rgba(0, 32, 81, .1);
+    outline: none;
+}
+
+.ssm-reply-form {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+}
+
+.ssm-reply-input {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    background: #f4f6f9;
+    border: 1px solid #e5e9f0;
+    border-radius: 999px;
+    padding: .5rem 1rem;
+    transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+
+.ssm-reply-input:focus-within {
+    border-color: var(--ssm-royal-blue);
+    box-shadow: 0 0 0 .2rem rgba(0, 32, 81, .12);
+    background: #fff;
+}
+
+.ssm-reply-input.has-error {
+    border-color: #dc3545;
+}
+
+.ssm-reply-input__icon {
+    color: #9aa5b1;
+    font-size: .95rem;
+    flex-shrink: 0;
+}
+
+.ssm-reply-input__field {
+    flex-grow: 1;
+    border: none;
+    background: transparent;
+    font-size: .875rem;
+    outline: none;
+    min-width: 0;
+}
+
+.ssm-reply-send {
+    flex-shrink: 0;
+    border-radius: 999px !important;
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .5rem 1.15rem;
+    font-weight: 600;
+}
+
+/* ---------------------------------------------------------------- */
+/* Frontend header "Add Property" button                            */
+/* Fallback styles: the primary styles live inside each header       */
+/* template's own stored CSS, but this guarantees the button still   */
+/* renders properly for any template that doesn't carry its own      */
+/* (e.g. templates stored in the DB before this button existed).     */
+/* ---------------------------------------------------------------- */
+
+.ssm-header__add-property {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #fff;
+    background: linear-gradient(135deg, var(--ssm-royal-blue), var(--ssm-deep-navy));
+    border: 1px solid var(--ssm-royal-blue);
+    box-shadow: 0 2px 8px rgba(0, 32, 81, .18);
+    white-space: nowrap;
+    letter-spacing: .01em;
+    transition: all .2s ease;
+}
+
+.ssm-header__add-property:hover,
+.ssm-header__add-property:focus-visible {
+    background: var(--ssm-deep-navy);
+    border-color: var(--ssm-deep-navy);
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 32, 81, .25);
+    outline: none;
+}
+
+.ssm-header__add-property-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--ssm-gold);
+    color: var(--ssm-deep-navy);
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+/* ---------------------------------------------------------------- */
+/* Frontend floating chat widget — matches the admin brand palette  */
+/* ---------------------------------------------------------------- */
+
+.ssm-chat-widget {
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 16px 40px rgba(5, 45, 100, .22), 0 4px 12px rgba(5, 45, 100, .1);
+    background: #fff;
+}
+
+.ssm-chat-widget__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .75rem 1rem;
+    color: #fff;
+    background: linear-gradient(120deg, var(--ssm-royal-blue), var(--ssm-deep-navy));
+}
+
+.ssm-chat-widget__toggle {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    color: #fff;
+    background: linear-gradient(135deg, var(--ssm-royal-blue), var(--ssm-deep-navy));
+    box-shadow: 0 10px 24px rgba(5, 45, 100, .32), 0 0 0 4px var(--ssm-gold-light);
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.ssm-chat-widget__toggle:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 14px 28px rgba(5, 45, 100, .38), 0 0 0 4px var(--ssm-gold);
+}
+
+/* Brief "bell ring" animation the moment a new reply arrives (unread count just went up) — a purely
+   visual attention cue on top of the badge number, see ChatWidget::render()'s lastSeenUnread comparison
+   and the chat-widget.blade.php Alpine listener that adds/removes this class. */
+@keyframes ssm-chat-widget-ring {
+    0%, 100% { transform: rotate(0deg); }
+    10%, 30%, 50%, 70% { transform: rotate(-14deg); }
+    20%, 40%, 60%, 80% { transform: rotate(14deg); }
+    90% { transform: rotate(-4deg); }
+}
+
+.ssm-chat-widget__toggle--ring {
+    animation: ssm-chat-widget-ring .6s ease-in-out;
+}
+
+.ssm-msg-bubble {
+    padding: .55rem .85rem;
+    border-radius: 1rem;
+    max-width: 85%;
+    box-shadow: 0 1px 3px rgba(5, 45, 100, .08);
+}
+
+.ssm-msg-bubble.is-mine {
+    background: linear-gradient(135deg, var(--ssm-royal-blue), var(--ssm-deep-navy));
+    color: #fff;
+    border-bottom-right-radius: .3rem;
+}
+
+.ssm-msg-bubble.is-theirs {
+    background: #f1f3f6;
+    color: #1f2937;
+    border-bottom-left-radius: .3rem;
+}
+
+/* CRM Chat conversation list — selected row uses a low-opacity brand-blue tint instead of a
+   solid fill, so the default dark text stays fully readable rather than needing to switch to
+   white (Bootstrap's own .list-group-item.active sets white text for a solid-color fill). */
+.ssm-chat-list-item.active {
+    background-color: rgba(0, 32, 81, .1) !important;
+    border-color: rgba(0, 32, 81, .18) !important;
+    color: #1f2937 !important;
+}
+
+/* ================================================================== */
+/* 2026-08 admin UI refresh — foundation pass                         */
+/* Accessibility, buttons, forms, modals, alerts, badges, and the      */
+/* shared card-grid list pattern, consolidated here instead of        */
+/* duplicated per-page <style> blocks. Scoped to #admin-wrapper so     */
+/* none of this leaks onto the public frontend.                       */
+/* ================================================================== */
+
+/* ---- Accessibility: visible keyboard focus everywhere ---- */
+
+#admin-wrapper a:focus-visible,
+#admin-wrapper button:focus-visible,
+#admin-wrapper .btn:focus-visible,
+#admin-wrapper input:focus-visible,
+#admin-wrapper select:focus-visible,
+#admin-wrapper textarea:focus-visible,
+#admin-wrapper [tabindex]:focus-visible {
+    outline: 2px solid var(--ssm-royal-blue);
+    outline-offset: 2px;
+}
+
+.ssm-nav__link:focus-visible,
+.ssm-nav__toggle:focus-visible {
+    outline: 2px solid var(--ssm-gold);
+    outline-offset: -2px;
+}
+
+/* ---- Buttons: subtle lift on hover, press feedback on click ---- */
+
+#admin-wrapper .btn {
+    transition: transform .12s ease, box-shadow .12s ease, background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+
+#admin-wrapper .btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+#admin-wrapper .btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+#admin-wrapper .btn-primary:hover:not(:disabled),
+#admin-wrapper .btn-gold:hover:not(:disabled) {
+    box-shadow: 0 4px 12px rgba(0, 32, 81, .18);
+}
+
+/* Icon + label spacing inside any button, without requiring every view to remember `me-2` */
+#admin-wrapper .btn i.bi {
+    vertical-align: -.125em;
+}
+
+#admin-wrapper .btn i.bi:first-child:not(:only-child) {
+    margin-right: .4rem;
+}
+
+/* wire:loading-disabled buttons (Livewire auto-disables the trigger for the duration of the
+   request) get a clearer "working" look instead of just a flat disabled state. */
+#admin-wrapper .btn:disabled {
+    opacity: .65;
+    transform: none;
+}
+
+/* ---- Forms: consistent spacing/labels, accessible switches, file inputs ---- */
+
+#admin-wrapper .form-label {
+    font-weight: 600;
+    font-size: .85rem;
+    color: var(--ssm-text);
+    margin-bottom: .4rem;
+}
+
+#admin-wrapper .form-text {
+    color: var(--ssm-text-subtle);
+    font-size: .8rem;
+}
+
+#admin-wrapper .form-control,
+#admin-wrapper .form-select {
+    border-color: var(--ssm-border);
+}
+
+#admin-wrapper .form-control::placeholder {
+    color: var(--ssm-text-subtle);
+}
+
+#admin-wrapper .form-control:disabled,
+#admin-wrapper .form-select:disabled {
+    background-color: var(--ssm-surface-muted);
+}
+
+#admin-wrapper .form-check {
+    padding-left: 1.6em;
+}
+
+#admin-wrapper .form-check-input {
+    width: 1.15em;
+    height: 1.15em;
+    margin-top: .15em;
+    border-color: #c9d1dc;
+}
+
+#admin-wrapper .form-switch .form-check-input {
+    width: 2.4em;
+}
+
+#admin-wrapper .invalid-feedback {
+    font-size: .8rem;
+    font-weight: 500;
+}
+
+#admin-wrapper .is-invalid,
+#admin-wrapper .form-control.is-invalid,
+#admin-wrapper .form-select.is-invalid {
+    border-color: var(--ssm-danger);
+}
+
+/* Native file inputs styled to match the rest of the form system instead of the browser default
+   button-plus-filename look. */
+#admin-wrapper input[type="file"].form-control {
+    padding-top: .5rem;
+}
+
+/* ---- Modals: match the card system (no border, soft shadow, generous radius) ---- */
+
+#admin-wrapper .modal-content {
+    border: none;
+    border-radius: 1rem;
+    box-shadow: 0 20px 48px rgba(5, 45, 100, .18);
+    overflow: hidden;
+}
+
+#admin-wrapper .modal-header {
+    border-bottom: 1px solid var(--ssm-border);
+    padding: 1.1rem 1.4rem;
+}
+
+#admin-wrapper .modal-title {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: var(--ssm-text);
+}
+
+#admin-wrapper .modal-body {
+    padding: 1.4rem;
+}
+
+#admin-wrapper .modal-footer {
+    border-top: 1px solid var(--ssm-border);
+    padding: 1rem 1.4rem;
+}
+
+/* ---- Alerts: soft tinted background instead of Bootstrap's default bordered box ---- */
+
+#admin-wrapper .alert {
+    border: none;
+    border-radius: .75rem;
+    border-left: 4px solid transparent;
+    font-size: .9rem;
+}
+
+#admin-wrapper .alert-success { background: var(--ssm-success-light); border-left-color: var(--ssm-success); color: #14532d; }
+#admin-wrapper .alert-warning { background: var(--ssm-warning-light); border-left-color: var(--ssm-warning); color: #7c4a05; }
+#admin-wrapper .alert-danger  { background: var(--ssm-danger-light);  border-left-color: var(--ssm-danger);  color: #7f1d1d; }
+#admin-wrapper .alert-info    { background: var(--ssm-info-light);    border-left-color: var(--ssm-info);    color: #1e3a5f; }
+
+/* ---- Badges: consistent weight/padding, softened default palette ---- */
+
+#admin-wrapper .badge {
+    font-weight: 600;
+    padding: .4em .65em;
+    border-radius: .5rem;
+    letter-spacing: .01em;
+}
+
+#admin-wrapper .badge.text-bg-success { background-color: var(--ssm-success) !important; }
+#admin-wrapper .badge.text-bg-warning { background-color: var(--ssm-warning) !important; color: #fff !important; }
+#admin-wrapper .badge.text-bg-danger  { background-color: var(--ssm-danger) !important; }
+#admin-wrapper .badge.text-bg-info    { background-color: var(--ssm-info) !important; }
+
+/* ---- Shared admin list "card grid" pattern ----
+   Used by Properties/Projects/Blog Posts (and any future admin list) — was previously duplicated
+   as an identical <style> block inside each of those three Blade views; centralized here so
+   there's exactly one copy to maintain. Add the `admin-card-grid` class to the list's row wrapper
+   to opt in — no other markup changes needed. */
+
+.admin-card-grid .card {
+    transition: box-shadow .18s ease, transform .18s ease;
+}
+
+.admin-card-grid .card:hover {
+    box-shadow: 0 12px 28px rgba(5, 45, 100, .12);
+    transform: translateY(-3px);
+}
+
+.admin-card-grid .card-img-wrap {
+    height: 150px;
+    background: var(--ssm-surface-muted);
+    overflow: hidden;
+    position: relative;
+}
+
+.admin-card-grid .card-img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.admin-card-grid .card-img-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #adb5bd;
+    font-size: 2rem;
+}
+
+.admin-card-grid .card-badges {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+}
+
+.admin-card-grid .card-fav-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.admin-card-grid .card-title-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.admin-card-grid .card-title-link:hover {
+    color: var(--ssm-royal-blue);
+}
+
+/* ---- Breadcrumb (added for the 2026-08 admin navigation pass) ----
+   Reuses Bootstrap's own .breadcrumb/.breadcrumb-item markup (see
+   admin/partials/breadcrumb.blade.php) re-themed to match the brand system, rather than a
+   bespoke component — consistent with how .nav-pills/.nav-tabs/.pagination are handled above. */
+
+#admin-wrapper .ssm-breadcrumb {
+    margin-bottom: .6rem;
+}
+
+#admin-wrapper .ssm-breadcrumb .breadcrumb {
+    --bs-breadcrumb-divider: none;
+    font-size: .82rem;
+    align-items: center;
+}
+
+#admin-wrapper .ssm-breadcrumb .breadcrumb-item {
+    display: flex;
+    align-items: center;
+}
+
+#admin-wrapper .ssm-breadcrumb .breadcrumb-item + .breadcrumb-item::before {
+    content: "\F285"; /* bootstrap-icons bi-chevron-right */
+    font-family: bootstrap-icons;
+    font-size: .65rem;
+    color: var(--ssm-text-subtle);
+    padding: 0 .55rem;
+}
+
+#admin-wrapper .ssm-breadcrumb .breadcrumb-item a {
+    color: var(--ssm-text-muted);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    transition: color .15s ease;
+}
+
+#admin-wrapper .ssm-breadcrumb .breadcrumb-item a:hover {
+    color: var(--ssm-royal-blue);
+}
+
+#admin-wrapper .ssm-breadcrumb .breadcrumb-item.active {
+    color: var(--ssm-text);
+    font-weight: 600;
+}
+
+/* ---- Dashboard: section labels + stat card polish ---- */
+
+.ssm-page-header {
+    margin-bottom: 1.75rem;
+}
+
+.ssm-page-header__title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--ssm-text);
+    margin-bottom: .2rem;
+}
+
+.ssm-page-header__subtitle {
+    color: var(--ssm-text-muted);
+    font-size: .9rem;
+}
+
+.ssm-section-label {
+    font-size: .78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--ssm-text-subtle);
+    margin-bottom: 1rem;
+}
+
+.ssm-stat-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.ssm-stat-card::after {
+    content: "";
+    position: absolute;
+    top: -30px;
+    right: -30px;
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 32, 81, .06), transparent 70%);
+}
+
+.ssm-stat-card__icon {
+    position: relative;
+    z-index: 1;
+}
+
+/* ================================================================== */
+/* Auth pages (login / register / password reset) — split-panel design */
+/* Brand media panel on the left, the form on the right; collapses to  */
+/* a centered form with a small brand header below the lg breakpoint.  */
+/* ================================================================== */
+
+.ssm-auth {
+    min-height: 100vh;
+    display: flex;
+    background: var(--ssm-surface-muted);
+}
+
+/* ---- Left media panel (desktop only) ---- */
+
+.ssm-auth__media {
+    display: none;
+    width: 50%;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(160deg, var(--ssm-deep-navy), var(--ssm-royal-blue));
+}
+
+/* From the lg breakpoint up (where the media panel is shown side-by-side with the form), clip the
+   whole layout to exactly one viewport tall and let only the right form panel scroll internally —
+   otherwise a long form (e.g. Register, once every field is stacked full-width) stretches the left
+   media panel's fixed-height background past the viewport too. Below lg there's only ever one
+   column (the form), so the page is left to scroll normally — an inner scrollbox on a single-column
+   mobile layout would feel cramped for no benefit. */
+@media (min-width: 992px) {
+    .ssm-auth {
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    .ssm-auth__media {
+        display: block;
+    }
+
+    .ssm-auth__form {
+        height: 100%;
+        overflow-y: auto;
+    }
+}
+
+.ssm-auth__media-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    transform: scale(1.03);
+    animation: ssm-auth-bg-zoom 22s ease-in-out infinite alternate;
+}
+
+@keyframes ssm-auth-bg-zoom {
+    from {
+        transform: scale(1.03);
+    }
+    to {
+        transform: scale(1.1);
+    }
+}
+
+.ssm-auth__media-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(168deg, rgba(5, 45, 100, .93) 0%, rgba(0, 32, 81, .7) 55%, rgba(251, 171, 3, .35) 100%);
+}
+
+.ssm-auth__media-content {
+    position: relative;
+    z-index: 1;
+    height: 100%;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 3rem 3.25rem;
+    color: #fff;
+    overflow-y: auto;
+}
+
+.ssm-auth__brand {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+}
+
+.ssm-auth__brand-logo {
+    max-height: 44px;
+    width: auto;
+    object-fit: contain;
+    border-radius: .65rem;
+    padding: .3rem .6rem;
+    background: rgba(255, 255, 255, .94);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .22);
+}
+
+.ssm-auth__brand-text {
+    font-size: 1.3rem;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    color: #fff;
+}
+
+.ssm-auth__media-copy {
+    margin-top: auto;
+    max-width: 420px;
+}
+
+.ssm-auth__headline {
+    font-size: clamp(1.75rem, 2.4vw, 2.55rem);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -.02em;
+    margin-bottom: 1rem;
+}
+
+.ssm-auth__tagline {
+    font-size: .97rem;
+    line-height: 1.65;
+    color: rgba(255, 255, 255, .82);
+    margin-bottom: 1.6rem;
+}
+
+.ssm-auth__features {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 2.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: .7rem;
+}
+
+.ssm-auth__features li {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    font-size: .92rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, .92);
+}
+
+.ssm-auth__features i {
+    color: var(--ssm-gold);
+    font-size: 1.05rem;
+    flex-shrink: 0;
+}
+
+.ssm-auth__media-footer {
+    font-size: .78rem;
+    color: rgba(255, 255, 255, .55);
+}
+
+/* ---- Right form panel ---- */
+
+.ssm-auth__form {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2.5rem 1.5rem;
+    background: radial-gradient(circle at 85% 10%, rgba(251, 171, 3, .1), transparent 32%),
+        var(--ssm-surface-muted);
+}
+
+.ssm-auth__form-inner {
+    width: 100%;
+    max-width: 430px;
+    /* Auto margins collapse to 0 (top-aligned, so the panel's own overflow-y:auto can scroll to it)
+       when the form is taller than the panel, and split evenly (vertically centered) when it's
+       shorter — avoids the classic bug where `align-items: center` on the flex parent clips the top
+       of content once it overflows instead of letting it scroll into view. */
+    margin: auto 0;
+}
+
+.ssm-auth__mobile-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .6rem;
+    margin-bottom: 1.75rem;
+}
+
+.ssm-auth__mobile-brand .ssm-auth__brand-text {
+    color: var(--ssm-deep-navy);
+}
+
+.ssm-auth__form-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    color: var(--ssm-text);
+    margin-bottom: .35rem;
+}
+
+.ssm-auth__form-subtitle {
+    color: var(--ssm-text-muted);
+    font-size: .92rem;
+    margin-bottom: 1.75rem;
+}
+
+.ssm-auth .form-label {
+    font-weight: 600;
+    font-size: .85rem;
+    color: var(--ssm-text);
+    margin-bottom: .4rem;
+}
+
+.ssm-auth .form-control {
+    border-radius: .7rem;
+    padding: .72rem 1rem;
+    border-color: var(--ssm-border);
+    background-color: #fff;
+}
+
+.ssm-auth .form-control:focus {
+    border-color: var(--ssm-royal-blue);
+    box-shadow: 0 0 0 .2rem rgba(0, 32, 81, .12);
+}
+
+.ssm-auth .btn-primary {
+    border-radius: .7rem;
+    padding: .75rem 1rem;
+    font-weight: 600;
+}
+
+.ssm-auth .btn-primary:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 32, 81, .22);
+}
+
+.ssm-auth .form-check-label {
+    font-size: .85rem;
+    color: var(--ssm-text-muted);
+}
+
+.ssm-auth .alert {
+    border-radius: .7rem;
+    font-size: .87rem;
+}
+
+.ssm-auth__link-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1.15rem;
+    font-size: .85rem;
+}
+
+.ssm-auth__link-row a {
+    color: var(--ssm-royal-blue);
+    text-decoration: none;
+    transition: color .15s ease;
+}
+
+.ssm-auth__link-row a:hover {
+    color: var(--ssm-deep-navy);
+    text-decoration: underline;
+}
+
+.ssm-auth__secure-note {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .4rem;
+    margin-top: 1.75rem;
+    color: var(--ssm-text-subtle);
+    font-size: .78rem;
+}
+
+@media (max-width: 575.98px) {
+    .ssm-auth__form {
+        padding: 1.75rem 1.1rem;
+    }
+}
+
+/* Respect users who prefer reduced motion — drop the slow background zoom. */
+@media (prefers-reduced-motion: reduce) {
+    .ssm-auth__media-bg {
+        animation: none;
+        transform: none;
+    }
+}
+
+/* ==========================================================================
+   Shared confirm modal + toast system (app-wide, both admin and frontend)
+   ========================================================================== */
+
+.ssm-confirm-modal__content {
+    border: none;
+    border-radius: 1rem;
+    box-shadow: 0 20px 60px rgba(5, 45, 100, .25);
+}
+
+.ssm-confirm-modal__icon {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.ssm-confirm-modal__icon--danger {
+    background: #fdecea;
+    color: #dc3545;
+}
+
+.ssm-confirm-modal__icon--primary {
+    background: var(--ssm-gold-light);
+    color: var(--ssm-royal-blue);
+}
+
+.ssm-toast-stack {
+    position: fixed;
+    top: 1.25rem;
+    right: 1.25rem;
+    z-index: 1090;
+    display: flex;
+    flex-direction: column;
+    gap: .6rem;
+    width: min(360px, calc(100vw - 2rem));
+}
+
+.ssm-toast {
+    display: flex;
+    align-items: flex-start;
+    gap: .6rem;
+    background: #fff;
+    border-radius: .7rem;
+    padding: .85rem 1rem;
+    box-shadow: 0 10px 30px rgba(5, 45, 100, .15);
+    border-left: 4px solid var(--ssm-royal-blue);
+    animation: ssm-toast-in .2s ease;
+}
+
+.ssm-toast--success {
+    border-left-color: #198754;
+}
+
+.ssm-toast--error {
+    border-left-color: #dc3545;
+}
+
+.ssm-toast--warning {
+    border-left-color: var(--ssm-gold);
+}
+
+.ssm-toast__icon {
+    margin-top: .15rem;
+    font-size: 1.05rem;
+    flex-shrink: 0;
+}
+
+.ssm-toast--success .ssm-toast__icon {
+    color: #198754;
+}
+
+.ssm-toast--error .ssm-toast__icon {
+    color: #dc3545;
+}
+
+.ssm-toast--warning .ssm-toast__icon {
+    color: var(--ssm-gold);
+}
+
+.ssm-toast__message {
+    flex: 1;
+    font-size: .88rem;
+    color: var(--ssm-text, #1f2937);
+    line-height: 1.4;
+}
+
+.ssm-toast__close {
+    border: none;
+    background: transparent;
+    color: var(--ssm-text-subtle, #9ca3af);
+    line-height: 1;
+    padding: 0;
+    font-size: 1.1rem;
+}
+
+.ssm-toast__close:hover {
+    color: var(--ssm-text, #1f2937);
+}
+
+@keyframes ssm-toast-in {
+    from {
+        opacity: 0;
+        transform: translateX(16px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@media (max-width: 575.98px) {
+    .ssm-toast-stack {
+        top: auto;
+        bottom: 1rem;
+        right: 1rem;
+        left: 1rem;
+        width: auto;
+    }
+}

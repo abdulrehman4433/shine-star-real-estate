@@ -1,0 +1,89 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\Property;
+use App\Models\PropertyAmenity;
+use App\Models\PropertyCategory;
+use App\Models\PropertyType;
+use App\Models\User;
+use Illuminate\Database\Seeder;
+
+/**
+ * 12 additional approved listings so the homepage's "Featured Property For Sale" section
+ * (HomeController::renderFeaturedPropertiesSection(), take(6)) has enough real content to fill
+ * its 3-column grid instead of the 2 approved rows PropertySeeder alone produces. Separate from
+ * PropertySeeder on purpose — that one is about demonstrating the moderation workflow (one of
+ * each status); this one is purely "give the homepage something to show".
+ */
+class FeaturedPropertyDemoSeeder extends Seeder
+{
+    public function run(): void
+    {
+        if (Property::where('description', 'like', '%FeaturedPropertyDemoSeeder%')->exists()) {
+            return;
+        }
+
+        $agent = User::query()->where('email', 'agent@shinestarmarketing.test')->first();
+        $agency = User::query()->where('email', 'agency@shinestarmarketing.test')->first();
+
+        if (! $agent || ! $agency) {
+            $this->command?->warn('Skipping FeaturedPropertyDemoSeeder: demo agent/agency accounts not found. Run DemoUserSeeder first.');
+
+            return;
+        }
+
+        $categories = PropertyCategory::query()->pluck('id', 'name');
+        $types = PropertyType::query()->pluck('id', 'name');
+
+        if ($categories->isEmpty() || $types->isEmpty()) {
+            $this->command?->warn('Skipping FeaturedPropertyDemoSeeder: run PropertyCategorySeeder and PropertyTypeSeeder first.');
+
+            return;
+        }
+
+        $amenityIds = PropertyAmenity::query()->pluck('id');
+
+        $samples = [
+            ['title' => 'Modern Apartment in DHA Phase 6', 'category' => 'Apartment', 'type' => 'Sale', 'city' => 'Lahore', 'price' => 8500000, 'bedrooms' => 3, 'bathrooms' => 2, 'size' => 1400, 'lat' => 31.4697, 'lng' => 74.4142],
+            ['title' => 'Furnished Studio Near Liberty Market', 'category' => 'Studio', 'type' => 'Rent', 'city' => 'Lahore', 'price' => 45000, 'bedrooms' => null, 'bathrooms' => 1, 'size' => 550, 'lat' => 31.5204, 'lng' => 74.3436],
+            ['title' => 'Family House in Bahria Town', 'category' => 'House', 'type' => 'Sale', 'city' => 'Islamabad', 'price' => 32000000, 'bedrooms' => 5, 'bathrooms' => 4, 'size' => 3200, 'lat' => 33.6939, 'lng' => 73.1725, 'is_featured' => true],
+            ['title' => 'Cozy Villa with Private Garden', 'category' => 'Villa', 'type' => 'Sale', 'city' => 'Karachi', 'price' => 45000000, 'bedrooms' => 4, 'bathrooms' => 4, 'size' => 3800, 'lat' => 24.8607, 'lng' => 67.0011, 'is_featured' => true],
+            ['title' => 'Commercial Shop on Main Boulevard', 'category' => 'Shop', 'type' => 'Sale', 'city' => 'Lahore', 'price' => 12000000, 'bedrooms' => null, 'bathrooms' => 1, 'size' => 400, 'lat' => 31.4805, 'lng' => 74.3573],
+            ['title' => 'Executive Office Suite', 'category' => 'Office', 'type' => 'Rent', 'city' => 'Islamabad', 'price' => 85000, 'bedrooms' => null, 'bathrooms' => 2, 'size' => 1600, 'lat' => 33.7089, 'lng' => 73.0498],
+            ['title' => '2-Bed Apartment Near Metro Station', 'category' => 'Apartment', 'type' => 'Rent', 'city' => 'Rawalpindi', 'price' => 38000, 'bedrooms' => 2, 'bathrooms' => 2, 'size' => 950, 'lat' => 33.6007, 'lng' => 73.0679],
+            ['title' => 'Penthouse with City View', 'category' => 'Apartment', 'type' => 'Sale', 'city' => 'Karachi', 'price' => 28000000, 'bedrooms' => 3, 'bathrooms' => 3, 'size' => 2200, 'lat' => 24.8138, 'lng' => 67.0300, 'is_featured' => true],
+            ['title' => 'Warehouse Storage Facility', 'category' => 'Warehouse', 'type' => 'Rent', 'city' => 'Lahore', 'price' => 150000, 'bedrooms' => null, 'bathrooms' => 2, 'size' => 8000, 'lat' => 31.4200, 'lng' => 74.2800],
+            ['title' => 'Boutique Studio Flat', 'category' => 'Studio', 'type' => 'Sale', 'city' => 'Islamabad', 'price' => 9500000, 'bedrooms' => null, 'bathrooms' => 1, 'size' => 600, 'lat' => 33.6844, 'lng' => 73.0479],
+            ['title' => 'Corner House with Lawn', 'category' => 'House', 'type' => 'Rent', 'city' => 'Lahore', 'price' => 120000, 'bedrooms' => 4, 'bathrooms' => 3, 'size' => 2800, 'lat' => 31.4633, 'lng' => 74.2955],
+            ['title' => 'Hilltop Villa with Mountain View', 'category' => 'Villa', 'type' => 'Rent', 'city' => 'Islamabad', 'price' => 180000, 'bedrooms' => 5, 'bathrooms' => 5, 'size' => 4500, 'lat' => 33.7294, 'lng' => 73.0931],
+        ];
+
+        foreach ($samples as $index => $data) {
+            $owner = $index % 2 === 0 ? $agent : $agency;
+
+            $property = Property::create([
+                'user_id' => $owner->id,
+                'category_id' => $categories[$data['category']],
+                'type_id' => $types[$data['type']],
+                'title' => $data['title'],
+                'description' => 'Sample listing generated by FeaturedPropertyDemoSeeder for demo/testing purposes.',
+                'price' => $data['price'],
+                'price_type' => 'fixed',
+                'status' => 'approved',
+                'city' => $data['city'],
+                'address' => $data['city'],
+                'lat' => $data['lat'],
+                'lng' => $data['lng'],
+                'bedrooms' => $data['bedrooms'],
+                'bathrooms' => $data['bathrooms'],
+                'size' => $data['size'],
+                'is_featured' => $data['is_featured'] ?? false,
+            ]);
+
+            $property->amenities()->syncWithoutDetaching(
+                $amenityIds->random(min(3, $amenityIds->count()))->values()
+            );
+        }
+    }
+}

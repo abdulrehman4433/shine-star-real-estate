@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bluewhale Real Estate | Property Detail</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0b2545;
+    --blue:#1e63e0;
+    --blue-dark:#154bb0;
+    --mint:#eafaf3;
+    --mint-border:#bfe9d6;
+    --mint-text:#12866f;
+    --peach:#fdf1ea;
+    --peach-border:#f3d3bb;
+    --peach-text:#e07a3f;
+    --bg:#eef3fb;
+    --card:#ffffff;
+    --muted:#7c8aa0;
+    --text:#1b2a41;
+    --star:#f5a623;
+  }
+  *{box-sizing:border-box;}
+  body{
+    font-family:'Poppins',sans-serif;
+    background:var(--bg);
+    color:var(--text);
+  }
+  h1,h2,h3,h4,h5,h6{font-family:'Poppins',sans-serif;font-weight:700;color:var(--navy);}
+
+  /* ===== Gallery ===== */
+  .gallery{position:relative;display:flex;gap:6px;overflow:hidden;height:340px;}
+  .gallery img{width:100%;height:340px;object-fit:cover;}
+  .gallery .col-img{flex:1 1 50%;overflow:hidden;position:relative;}
+  .gallery-nav{
+    position:absolute;top:50%;transform:translateY(-50%);
+    width:42px;height:42px;border-radius:50%;background:#fff;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 4px 12px rgba(0,0,0,.15);cursor:pointer;color:var(--navy);z-index:5;
+  }
+  .gallery-nav.left{left:16px;}
+  .gallery-nav.right{right:16px;}
+  @media (max-width:767px){
+    .gallery{height:220px;}
+    .gallery img{height:220px;}
+  }
+
+  /* ===== Cards ===== */
+  .panel{
+    background:var(--card);
+    border-radius:12px;
+    box-shadow:0 2px 14px rgba(15,40,90,.06);
+    margin-bottom:22px;
+    overflow:hidden;
+  }
+  .panel-body-pad{padding:26px 28px;}
+  @media (max-width:575px){
+    .panel-body-pad{padding:18px 18px;}
+  }
+
+  .badge-sale{
+    background:var(--peach);color:var(--peach-text);border:1px solid var(--peach-border);
+    font-size:.72rem;font-weight:600;padding:5px 14px;border-radius:20px;
+  }
+  .price-tag{color:var(--blue);font-weight:800;font-size:1.6rem;}
+  .meta-icon{color:var(--muted);font-size:.95rem;}
+  .meta-icon i{color:var(--blue);margin-right:6px;}
+
+  .btn-soft-mint{
+    background:var(--mint);color:var(--mint-text);border:1px solid var(--mint-border);
+    font-weight:600;border-radius:8px;
+  }
+  .btn-soft-mint:hover{background:#dcf3ea;color:var(--mint-text);}
+  .btn-soft-peach{
+    background:var(--peach);color:var(--peach-text);border:1px solid var(--peach-border);
+    font-weight:600;border-radius:8px;
+  }
+  .btn-soft-peach:hover{background:#fbe4d4;color:var(--peach-text);}
+
+  /* ===== Accordion override ===== */
+  .accordion-item{border:none;border-bottom:1px solid #eef1f6;}
+  .accordion-item:last-child{border-bottom:none;}
+  .accordion-button{
+    font-weight:700;color:var(--navy);font-size:1.02rem;
+    padding:18px 28px;background:#fff;box-shadow:none !important;
+  }
+  .accordion-button:not(.collapsed){color:var(--navy);background:#fff;}
+  .accordion-button::after{
+    background-image:none;
+    font-family:"bootstrap-icons";
+    content:"\f282";
+    font-size:1rem;transition:transform .2s;
+  }
+  .accordion-button:not(.collapsed)::after{transform:rotate(180deg);}
+  .accordion-body{padding:0 28px 26px;color:#556077;line-height:1.85;}
+  @media (max-width:575px){
+    .accordion-button{padding:16px 18px;}
+    .accordion-body{padding:0 18px 20px;}
+  }
+
+  .feat-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px dashed #eef1f6;}
+  .feat-row:last-child{border-bottom:none;}
+  .feat-row span:first-child{font-weight:600;color:var(--navy);}
+  .feat-row span:last-child{color:#8892a4;}
+
+  .amenity-item{display:flex;align-items:center;gap:10px;margin-bottom:16px;color:#3d4a63;font-weight:500;}
+  .amenity-item i{color:#2ec27e;font-size:1.05rem;}
+
+  /* ===== Sidebar ===== */
+  .side-actions .btn{padding:10px 6px;font-size:.88rem;}
+
+  .agent-card .agent-head{
+    background:linear-gradient(120deg,var(--blue),var(--navy));
+    padding:20px 24px;display:flex;align-items:center;gap:14px;color:#fff;
+  }
+  .agent-avatar{
+    width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.25);
+    display:flex;align-items:center;justify-content:center;font-size:1.5rem;
+  }
+  .agent-card form{padding:22px 24px;}
+  .form-label{font-weight:600;color:var(--navy);font-size:.88rem;margin-bottom:6px;}
+  .form-control{
+    border-radius:8px;border:1px solid #e2e7f0;padding:10px 14px;font-size:.9rem;
+    background:#f8fafd;
+  }
+  .form-control:focus{box-shadow:0 0 0 3px rgba(30,99,224,.12);border-color:var(--blue);background:#fff;}
+  .btn-primary-custom{
+    background:var(--blue);border:none;font-weight:600;border-radius:8px;padding:12px;
+    width:100%;
+  }
+  .btn-primary-custom:hover{background:var(--blue-dark);}
+
+  .calc-card .calc-head{
+    background:linear-gradient(120deg,var(--navy),#123a73);
+    padding:22px 24px;color:#fff;
+  }
+  .calc-card .calc-head h5{color:#fff;margin-bottom:4px;}
+  .calc-card form{padding:22px 24px;}
+  .input-icon{position:relative;}
+  .input-icon i{
+    position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.9rem;
+  }
+  .input-icon .form-control{padding-left:36px;}
+
+  /* Featured property list */
+  .fp-item{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid #f0f2f7;}
+  .fp-item:last-child{border-bottom:none;}
+  .fp-item img{width:64px;height:60px;object-fit:cover;border-radius:8px;flex-shrink:0;}
+  .fp-item h6{font-size:.87rem;margin-bottom:3px;font-weight:700;color:var(--navy);}
+  .fp-item .fp-date{font-size:.74rem;color:var(--muted);}
+  .fp-item .fp-loc{font-size:.76rem;color:var(--muted);}
+  .fp-tag{
+    display:inline-block;font-size:.68rem;font-weight:600;padding:2px 10px;border-radius:12px;
+    background:var(--mint);color:var(--mint-text);border:1px solid var(--mint-border);margin-top:4px;
+  }
+  .fp-tag.rent{background:var(--mint);}
+
+  /* Map */
+  .map-frame{width:100%;height:340px;border:0;border-radius:10px;}
+
+  /* Rating stars */
+  .stars i{color:var(--star);font-size:1.05rem;margin-right:2px;}
+  .avg-rating-box{
+    background:#f4f6fb;border-radius:10px;text-align:center;padding:18px;
+  }
+  .avg-rating-box .num{font-size:2rem;font-weight:800;color:var(--navy);}
+  .avg-rating-box .lbl{font-size:.82rem;color:var(--muted);}
+
+  /* CTA banner */
+  .cta-banner{
+    background:linear-gradient(120deg,var(--blue),var(--navy));
+    padding:40px 0;color:#fff;
+  }
+  .cta-banner h4{color:#fff;margin-bottom:4px;}
+  .cta-banner p{color:rgba(255,255,255,.85);margin-bottom:0;}
+  .btn-signup{
+    background:#fff;color:var(--navy);font-weight:700;border-radius:30px;padding:12px 30px;border:none;
+  }
+  .btn-signup:hover{background:#f0f3f9;}
+
+  .section-title-plain{font-weight:700;color:var(--navy);margin-bottom:14px;}
+</style>
+</head>
+<body>
+
+<!-- ===== Image Gallery ===== -->
+<div class="gallery">
+  <div class="col-img">
+    <img src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?q=80&w=1200&auto=format&fit=crop" alt="Living room with plants">
+  </div>
+  <div class="col-img">
+    <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1200&auto=format&fit=crop" alt="Cozy living room with fireplace">
+  </div>
+  <div class="gallery-nav left"><i class="bi bi-arrow-left"></i></div>
+  <div class="gallery-nav right"><i class="bi bi-arrow-right"></i></div>
+</div>
+
+<div class="container-xl py-4">
+  <div class="row g-4">
+
+    <!-- ============ MAIN COLUMN ============ -->
+    <div class="col-lg-8">
+
+      <!-- Header info card -->
+      <div class="panel panel-body-pad">
+        <span class="badge-sale">Sale</span>
+        <h4 class="mt-3 mb-1">Bluewhale Real Estate</h4>
+        <p class="text-muted mb-2"><i class="bi bi-geo-alt-fill text-primary me-1"></i>778 Panama City, FL</p>
+
+        <div class="row align-items-center g-3">
+          <div class="col-6">
+            <div class="price-tag">$5,000</div>
+          </div>
+          <div class="col-6 text-end">
+            <button class="btn btn-soft-mint btn-sm px-3"><i class="bi bi-share-fill me-1"></i>Share</button>
+          </div>
+        </div>
+
+        <hr class="my-3">
+
+        <div class="d-flex flex-wrap gap-4">
+          <span class="meta-icon"><i class="bi bi-car-front-fill"></i>3 Beds</span>
+          <span class="meta-icon"><i class="bi bi-droplet-fill"></i>2 Baths</span>
+          <span class="meta-icon"><i class="bi bi-arrows-fullscreen"></i>1200 sqft</span>
+        </div>
+      </div>
+
+      <!-- Accordion sections -->
+      <div class="panel">
+        <div class="accordion" id="mainAccordion">
+
+          <!-- Detail & Features -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#detail">Detail &amp; Features</button>
+            </h2>
+            <div id="detail" class="accordion-collapse collapse show" data-bs-parent="#mainAccordion">
+              <div class="accordion-body">
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="feat-row"><span>Garage</span><span>1</span></div>
+                    <div class="feat-row"><span>Bedroom</span><span>3</span></div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="feat-row"><span>Area Size (sqft)</span><span>1200</span></div>
+                    <div class="feat-row"><span>Washroom</span><span>2</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Description -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#desc">Description</button>
+            </h2>
+            <div id="desc" class="accordion-collapse collapse show" data-bs-parent="#mainAccordion">
+              <div class="accordion-body">
+                <p>There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration in some form, by injected humour, or randomised words which don't look even slightly believable. If you are going to use a passage of Lorem Ipsum, you need to be sure there isn't anything embarrassing hidden in the middle of text. All the Lorem Ipsum generators on the Internet tend to repeat predefined chunks as necessary, making this the first true generator on the Internet.</p>
+                <p class="mb-0">Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Amenities -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#amenities">Amenities</button>
+            </h2>
+            <div id="amenities" class="accordion-collapse collapse show" data-bs-parent="#mainAccordion">
+              <div class="accordion-body">
+                <div class="row">
+                  <div class="col-sm-4 col-6"><div class="amenity-item"><i class="bi bi-check-circle-fill"></i>Air Conditioning</div></div>
+                  <div class="col-sm-4 col-6"><div class="amenity-item"><i class="bi bi-check-circle-fill"></i>Central Heating</div></div>
+                  <div class="col-sm-4 col-6"><div class="amenity-item"><i class="bi bi-check-circle-fill"></i>Internet</div></div>
+                  <div class="col-sm-4 col-6"><div class="amenity-item"><i class="bi bi-check-circle-fill"></i>Alarm System</div></div>
+                  <div class="col-sm-4 col-6"><div class="amenity-item"><i class="bi bi-check-circle-fill"></i>Free WiFi</div></div>
+                  <div class="col-sm-4 col-6"><div class="amenity-item"><i class="bi bi-check-circle-fill"></i>Car Parking</div></div>
+                  <div class="col-sm-4 col-6"><div class="amenity-item"><i class="bi bi-check-circle-fill"></i>Gym</div></div>
+                  <div class="col-sm-4 col-6"><div class="amenity-item"><i class="bi bi-check-circle-fill"></i>Window Covering</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Property Video -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#video">Property Video</button>
+            </h2>
+            <div id="video" class="accordion-collapse collapse" data-bs-parent="#mainAccordion">
+              <div class="accordion-body">
+                <div class="ratio ratio-16x9 rounded overflow-hidden">
+                  <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" title="Property video" allowfullscreen></iframe>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Floor Plan -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#floorplan">Floor Plan</button>
+            </h2>
+            <div id="floorplan" class="accordion-collapse collapse" data-bs-parent="#mainAccordion">
+              <div class="accordion-body">
+                <p class="mb-0">Floor plan details will be available soon. Please contact the agent for the complete layout drawing.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Location -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#location">Location</button>
+            </h2>
+            <div id="location" class="accordion-collapse collapse show" data-bs-parent="#mainAccordion">
+              <div class="accordion-body">
+                <iframe class="map-frame" loading="lazy"
+                  src="https://www.openstreetmap.org/export/embed.html?bbox=-15.0%2C-15.0%2C50.0%2C20.0&layer=mapnik&marker=1.35%2C25.0">
+                </iframe>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gallery -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#gallerySec">Gallery</button>
+            </h2>
+            <div id="gallerySec" class="accordion-collapse collapse" data-bs-parent="#mainAccordion">
+              <div class="accordion-body">
+                <div class="row g-2">
+                  <div class="col-4"><img class="w-100 rounded" style="height:100px;object-fit:cover" src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?q=80&w=400&auto=format&fit=crop"></div>
+                  <div class="col-4"><img class="w-100 rounded" style="height:100px;object-fit:cover" src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=400&auto=format&fit=crop"></div>
+                  <div class="col-4"><img class="w-100 rounded" style="height:100px;object-fit:cover" src="https://images.unsplash.com/photo-1616594039964-ae9021a400a0?q=80&w=400&auto=format&fit=crop"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rating -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#rating">Rating</button>
+            </h2>
+            <div id="rating" class="accordion-collapse collapse show" data-bs-parent="#mainAccordion">
+              <div class="accordion-body">
+                <p class="mb-0 text-muted">Not yet Rated.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Write a Review -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#review">Write A Review</button>
+            </h2>
+            <div id="review" class="accordion-collapse collapse show" data-bs-parent="#mainAccordion">
+              <div class="accordion-body">
+                <div class="row g-4 mb-3">
+                  <div class="col-sm-4">
+                    <div class="fw-semibold text-navy mb-1" style="color:var(--navy)">Property</div>
+                    <div class="stars"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i></div>
+                  </div>
+                  <div class="col-sm-4">
+                    <div class="fw-semibold mb-1" style="color:var(--navy)">Location</div>
+                    <div class="stars"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i></div>
+                  </div>
+                  <div class="col-sm-4">
+                    <div class="avg-rating-box">
+                      <div class="num">5</div>
+                      <div class="lbl">Average Ratting</div>
+                    </div>
+                  </div>
+                  <div class="col-sm-4">
+                    <div class="fw-semibold mb-1" style="color:var(--navy)">Value for money</div>
+                    <div class="stars"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i></div>
+                  </div>
+                  <div class="col-sm-4">
+                    <div class="fw-semibold mb-1" style="color:var(--navy)">Agent support</div>
+                    <div class="stars"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i></div>
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <textarea class="form-control" rows="4" placeholder="Messages"></textarea>
+                </div>
+                <div class="row g-3 mb-3">
+                  <div class="col-md-6"><input type="text" class="form-control" placeholder="Your Name"></div>
+                  <div class="col-md-6"><input type="email" class="form-control" placeholder="Your Email"></div>
+                </div>
+                <button class="btn btn-soft-mint px-4">Submit Review</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Reviews -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#reviews">Reviews</button>
+            </h2>
+            <div id="reviews" class="accordion-collapse collapse show" data-bs-parent="#mainAccordion">
+              <div class="accordion-body">
+                <p class="mb-0 text-muted">Be the first one to rate this.</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ============ SIDEBAR ============ -->
+    <div class="col-lg-4">
+
+      <div class="row g-2 side-actions mb-3">
+        <div class="col-4">
+          <button class="btn btn-soft-mint w-100"><i class="bi bi-share-fill me-1"></i>Share</button>
+        </div>
+        <div class="col-4">
+          <button class="btn btn-soft-peach w-100"><i class="bi bi-heart-fill me-1"></i>Save</button>
+        </div>
+        <div class="col-4">
+          <button class="btn btn-soft-mint w-100"><i class="bi bi-arrow-left-right me-1"></i>Compare</button>
+        </div>
+      </div>
+
+      <!-- Agent contact card -->
+      <div class="panel agent-card">
+        <div class="agent-head">
+          <div class="agent-avatar"><i class="bi bi-person-fill"></i></div>
+          <h5 class="mb-0">Readmin Yuj</h5>
+        </div>
+        <form>
+          <div class="mb-3">
+            <label class="form-label">Name</label>
+            <input type="text" class="form-control" placeholder="Your Name">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-control" placeholder="Your Email">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Phone No.</label>
+            <input type="text" class="form-control" placeholder="+001-234-5678">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea class="form-control" rows="3">I'm interested in this property.</textarea>
+          </div>
+          <button type="button" class="btn btn-primary-custom">Send Message</button>
+        </form>
+      </div>
+
+      <!-- Calculate card -->
+      <div class="panel calc-card">
+        <div class="calc-head">
+          <h5>Calculate</h5>
+          <p class="mb-0" style="font-size:.85rem;opacity:.85;">View your Interest Rate</p>
+        </div>
+        <form>
+          <div class="mb-3 input-icon">
+            <i class="bi bi-currency-dollar"></i>
+            <input type="text" class="form-control" placeholder="Sale Price">
+          </div>
+          <div class="mb-3 input-icon">
+            <i class="bi bi-currency-dollar"></i>
+            <input type="text" class="form-control" placeholder="Down Payment">
+          </div>
+          <div class="mb-3 input-icon">
+            <i class="bi bi-calendar3"></i>
+            <input type="text" class="form-control" placeholder="Loan Term (Year)">
+          </div>
+          <div class="mb-3 input-icon">
+            <i class="bi bi-percent"></i>
+            <input type="text" class="form-control" placeholder="Interest Rate">
+          </div>
+          <button type="button" class="btn btn-primary-custom">Calculate</button>
+        </form>
+      </div>
+
+      <!-- Featured property -->
+      <div class="panel panel-body-pad">
+        <h5 class="section-title-plain">Featured Property</h5>
+
+        <div class="fp-item">
+          <img src="https://images.unsplash.com/photo-1493809842364-78817add7ffb?q=80&w=200&auto=format&fit=crop" alt="">
+          <div>
+            <h6>American Electric Lofts Apartments</h6>
+            <div class="fp-date">October 24, 2022</div>
+            <div class="fp-loc"><i class="bi bi-geo-alt"></i> 3599 Huntz Lane</div>
+            <span class="fp-tag">Buy</span>
+          </div>
+        </div>
+
+        <div class="fp-item">
+          <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?q=80&w=200&auto=format&fit=crop" alt="">
+          <div>
+            <h6>Westchester Village</h6>
+            <div class="fp-date">July 24, 2022</div>
+            <div class="fp-loc"><i class="bi bi-geo-alt"></i> 3599 Huntz Lane</div>
+            <span class="fp-tag">Buy</span>
+          </div>
+        </div>
+
+        <div class="fp-item">
+          <img src="https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=200&auto=format&fit=crop" alt="">
+          <div>
+            <h6>The Ridge Of St. Joseph Apartments</h6>
+            <div class="fp-date">July 24, 2022</div>
+            <div class="fp-loc"><i class="bi bi-geo-alt"></i> 3599 Huntz Lane View</div>
+            <span class="fp-tag rent">Rent</span>
+          </div>
+        </div>
+
+        <div class="fp-item">
+          <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?q=80&w=200&auto=format&fit=crop" alt="">
+          <div>
+            <h6>Cottonwood Creek Apartments</h6>
+            <div class="fp-date">July 24, 2022</div>
+            <div class="fp-loc"><i class="bi bi-geo-alt"></i> 3599 Huntz Lane</div>
+            <span class="fp-tag rent">Rent</span>
+          </div>
+        </div>
+
+        <div class="fp-item">
+          <img src="https://images.unsplash.com/photo-1560185893-a55cbc8c57e8?q=80&w=200&auto=format&fit=crop" alt="">
+          <div>
+            <h6>Mitchell Park Plaza Apartments</h6>
+            <div class="fp-date">July 24, 2022</div>
+            <div class="fp-loc"><i class="bi bi-geo-alt"></i> 3599 Huntz Lane</div>
+            <span class="fp-tag rent">Rent</span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===== CTA Banner ===== -->
+<div class="cta-banner">
+  <div class="container-xl d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 text-center text-md-start">
+    <div>
+      <h4>Want To Become A Real Estate Agent?</h4>
+      <p>We'll help you to grow your career and growth.</p>
+    </div>
+    <button class="btn btn-signup">SignUp Today</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
