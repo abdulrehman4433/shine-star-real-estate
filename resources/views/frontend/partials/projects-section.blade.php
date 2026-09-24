@@ -50,4 +50,30 @@
             </div>
         </div>
     </section>
+
+    <style>
+        /* Mobile only: exactly one project fills the scroll row (no half-visible next card),
+           and each press of ← / → steps exactly one card — the page JS scrolls by
+           card width + gap, which here equals the full row width. scroll-snap keeps a
+           dragged/swiped row landing on a whole card too.
+
+           These rules live with the partial rather than in the Home page's stored `css`
+           column because they belong to this section's markup, not the theme's. */
+        @media (max-width: 767.98px) {
+            .scroll-row {
+                scroll-snap-type: x mandatory;
+            }
+
+            .scroll-row .property-card-wrap {
+                flex: 0 0 100%;
+                scroll-snap-align: start;
+            }
+
+            /* Title + description wrap onto their own lines here, so push the controls to
+               the right instead of leaving them stranded under the paragraph. */
+            .scroll-controls {
+                margin-left: auto;
+            }
+        }
+    </style>
 @endif

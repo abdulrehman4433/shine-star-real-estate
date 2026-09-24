@@ -19,10 +19,13 @@
 
     {{-- Sits between the popup and the chat toggle so it always renders directly above the chat
          icon — with the popup closed (the usual case) it's simply the top of the two buttons.
-         Plain anchor, no Livewire round-trip. digits-only number, per the wa.me format. --}}
+         Plain anchor, no Livewire round-trip. digits-only number, per the wa.me format.
+         Shrinks to half size while the chat popup is open (shares the `open` state from the
+         root x-data) so the popup has room; restoring on close is pure CSS. --}}
     <a href="https://wa.me/923355117928"
         target="_blank" rel="noopener"
         class="ssm-whatsapp-toggle"
+        :class="{ 'ssm-whatsapp-toggle--collapsed': open }"
         style="margin-bottom: 16px;"
         title="Chat on WhatsApp"
         aria-label="Chat on WhatsApp">

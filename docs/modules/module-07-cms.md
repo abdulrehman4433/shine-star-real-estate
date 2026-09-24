@@ -336,6 +336,44 @@ UI for them at all).
   was built around** — the two aren't directly related features, but both sessions converged on "download and
   self-host, don't hotlink" as the standing rule for any image/icon/video this app displays.
 
+## 2026-09-24 fix: mobile-only homepage layout (hero search, Featured Projects, How It Works, Reviews)
+
+Four sections broke at mobile widths (≤767.98px) while desktop/tablet were fine; all changes are scoped to
+mobile breakpoints only. The fix is split by ownership — the same "repo partial vs. DB `Page` row" rule used
+throughout this doc:
+
+- **DB side** — `database/migrations/2026_09_24_120000_add_mobile_fixes_to_home_page_css.php` appends a
+  marker-delimited block (`/* == MOBILE FIXES BEGIN == */` … `/* == MOBILE FIXES END == */`) to the null-slug
+  `Page` row's `css` column and is idempotent (re-running only replaces the marker block, so the documented
+  re-paste recovery procedure can't duplicate it). It covers:
+  - **Hero banner search**: the inline search controls (select/input/button) wrapped into a squashed 2-row
+    layout with mismatched heights (40/34px). The block stacks them full-width with a uniform 46px height
+    (verified 313×46 each at a 375px viewport) on a solid white panel (`background:#fff` — the theme's
+    default translucent background read poorly over the banner image at phone size).
+  - **"How It Works" cards**: cards stacked to one column on mobile but kept `flex: 1 1 0` + `overflow:
+    hidden`, collapsing each to a ~76px sliver with clipped content. Fixed with `flex: 0 0 auto` so cards
+    size to their content (now 261px, unclipped).
+- **Repo side** — the two sections whose markup lives in Blade partials (not the DB blob):
+  - `resources/views/frontend/partials/projects-section.blade.php`: mobile-only `<style>` giving
+    `.scroll-row`/wraps `flex: 0 0 100%` + `scroll-snap-type: x mandatory` (exactly one card visible;
+    was 300px cards in a 336px row) and `.scroll-controls { margin-left: auto }` so the prev/next arrows
+    sit right-aligned under the section heading. The existing Page JS scroll handler
+    (`scrollAmount = cardWidth + 20`) then steps exactly one card per click — no JS changes needed.
+  - `resources/views/frontend/partials/reviews-section.blade.php`: the old carousel showed 3 review cards
+    per slide on mobile (unreadably narrow). Mobile now gets a **separate** carousel
+    (`#reviewCarouselMobile`, `d-md-none`, one `.carousel-item` per review, `data-bs-ride="carousel"
+    data-bs-interval="5000"` for auto-scroll, with prev/next controls), while the original chunked
+    carousel is wrapped in `d-none d-md-block` so desktop rendering is byte-for-byte unchanged. The review
+    card markup was extracted to a shared partial `resources/views/frontend/partials/review-card.blade.php`
+    so both carousels render identical cards.
+
+**Verification** (headless Chrome at a 375px viewport, via a temporary 375px-iframe harness page since
+headless Chrome's `--window-size` won't go below ~500px; harness files were deleted afterwards): hero
+controls 313×46, project card width == row width (351/351, arrows step exactly one card: `scrollBy`
+deltas 371/371/−371), `.hiw-card` heights 261 with `contentClipped=false`, mobile reviews
+`slides=10 / 1 active card / ride=interval 5000ms` with the desktop carousel hidden, and
+`pageOverflow=false` at 375px. Migration ran clean via `php artisan migrate --force`.
+
 ## Tests
 
 None added for any of the 2026-07-28/2026-08-05 enhancements (explicitly skipped, consistent with every

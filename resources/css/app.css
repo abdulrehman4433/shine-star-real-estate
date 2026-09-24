@@ -1456,6 +1456,18 @@ a:hover { color: var(--ssm-deep-navy); }
     box-shadow: 0 14px 28px rgba(6, 94, 84, .38), 0 0 0 4px rgba(37, 211, 102, .5);
 }
 
+/* While the chat popup is open the WhatsApp shortcut shrinks to 50% (Alpine toggles this class
+   off the shared `open` state in chat-widget.blade.php). Doubled class + repeated :hover/
+   :focus-visible selectors so the base and hover rules above (same `transform` property,
+   higher specificity via the pseudo-class) can't win and pop it back to full size — hovering
+   the shrunk icon keeps it at scale(.5) instead. */
+.ssm-whatsapp-toggle.ssm-whatsapp-toggle--collapsed,
+.ssm-whatsapp-toggle.ssm-whatsapp-toggle--collapsed:hover,
+.ssm-whatsapp-toggle.ssm-whatsapp-toggle--collapsed:focus-visible {
+    transform: scale(.5);
+    box-shadow: 0 4px 12px rgba(6, 94, 84, .28), 0 0 0 2px rgba(37, 211, 102, .28);
+}
+
 /* Brief "bell ring" animation the moment a new reply arrives (unread count just went up) — a purely
    visual attention cue on top of the badge number, see ChatWidget::render()'s lastSeenUnread comparison
    and the chat-widget.blade.php Alpine listener that adds/removes this class. */
