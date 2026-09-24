@@ -1429,6 +1429,33 @@ a:hover { color: var(--ssm-deep-navy); }
     box-shadow: 0 14px 28px rgba(5, 45, 100, .38), 0 0 0 4px var(--ssm-gold);
 }
 
+/* Floating WhatsApp shortcut pinned directly above the chat toggle (same 58px circle so the pair
+   lines up). It is a plain <a> rather than anything Livewire — it just deep-links to wa.me, which
+   opens the WhatsApp app on mobile and WhatsApp Web on desktop. Number lives in
+   chat-widget.blade.php. */
+.ssm-whatsapp-toggle {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: #fff;
+    text-decoration: none;
+    background: linear-gradient(135deg, #25d366, #128c7e);
+    box-shadow: 0 10px 24px rgba(6, 94, 84, .32), 0 0 0 4px rgba(37, 211, 102, .28);
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.ssm-whatsapp-toggle:hover,
+.ssm-whatsapp-toggle:focus-visible {
+    color: #fff;
+    text-decoration: none;
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 14px 28px rgba(6, 94, 84, .38), 0 0 0 4px rgba(37, 211, 102, .5);
+}
+
 /* Brief "bell ring" animation the moment a new reply arrives (unread count just went up) — a purely
    visual attention cue on top of the badge number, see ChatWidget::render()'s lastSeenUnread comparison
    and the chat-widget.blade.php Alpine listener that adds/removes this class. */

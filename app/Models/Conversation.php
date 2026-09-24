@@ -117,10 +117,14 @@ class Conversation extends Model
             ];
         }
 
+        // guest_* doubles as a snapshot of whatever a logged-in user typed into the widget's start
+        // form (ChatBox::startChat()), so the CRM shows what they actually submitted rather than
+        // whatever happens to be on their account row. guest_email is never written for these
+        // threads, so email always falls back to the account — see the ChatBox property docblock.
         return [
-            'name' => $this->initiator?->name,
-            'email' => $this->initiator?->email,
-            'phone' => $this->initiator?->phone,
+            'name' => $this->guest_name ?: $this->initiator?->name,
+            'email' => $this->guest_email ?: $this->initiator?->email,
+            'phone' => $this->guest_phone ?: $this->initiator?->phone,
         ];
     }
 
@@ -228,21 +232,35 @@ class Conversation extends Model
      *  session, so the same person emailing in from a new tab/device/incognito window still lands back
      *  in the same thread rather than fragmenting their history), refreshing name/phone in case they
      *  changed. If none exists, or the only prior one is closed, starts a genuinely new conversation —
-     *  same "closed means don't resume" rule as startBetween(). */
+     *  same "closed means don't resume" rule as startBetween().
+     *
+     *  When the guest provides no email (null), email-based resume is skipped entirely — there's no
+     *  stable identifier to match across sessions, so a new conversation is always created. */
     public static function findOrStartGuest(array $guest, User $recipient, ?Property $property = null): self
     {
-        $existing = self::query()
+        $query = self::query()
             ->where('recipient_id', $recipient->id)
             ->where('property_id', $property?->id)
-            ->where('guest_email', $guest['email'])
-            ->openOnly()
-            ->latest('created_at')
-            ->first();
+            // A guest must never be resumed into a thread a logged-in user started. ChatBox::startChat()
+            // now creates open conversations with the very same recipient/property as a guest widget
+            // chat, and since the email filter below is skipped whenever the guest omits their address,
+            // this query would otherwise match one and hand an anonymous visitor that user's history.
+            ->whereNull('initiator_id')
+            ->openOnly();
+
+        // Only attempt email-based resume when the guest actually provided an email — without one
+        // there's no stable cross-session identifier to match on.
+        if (! empty($guest['email'])) {
+            $query->where('guest_email', $guest['email']);
+        }
+
+        $existing = $query->latest('created_at')->first();
 
         if ($existing) {
             $existing->update([
                 'guest_name' => $guest['name'],
                 'guest_phone' => $guest['phone'] ?? $existing->guest_phone,
+                'guest_email' => $guest['email'] ?? $existing->guest_email,
             ]);
 
             return $existing;

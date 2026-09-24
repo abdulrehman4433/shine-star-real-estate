@@ -28,6 +28,10 @@ class NewChatMessage implements ShouldBroadcastNow
         $channels = [
             new PrivateChannel("chat.conversation.{$this->message->conversation_id}"),
             new PrivateChannel("App.Models.User.{$conversation->recipient_id}"),
+            // Role-scoped: the recipient above is a single user, but every admin/super-admin needs
+            // to hear about this on the frontend widget regardless of who happens to be addressed.
+            // Authorization lives in routes/channels.php — non-staff simply can't subscribe.
+            new PrivateChannel('staff.chat'),
         ];
 
         if ($conversation->initiator_id) {

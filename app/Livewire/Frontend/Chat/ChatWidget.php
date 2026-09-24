@@ -3,6 +3,7 @@
 namespace App\Livewire\Frontend\Chat;
 
 use App\Models\Conversation;
+use App\Models\Message;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -29,6 +30,15 @@ class ChatWidget extends Component
     {
     }
 
+    // Staff are often not the *recipient* of the messages that concern them — GuestChatBox addresses
+    // every guest chat to one specific super-admin — so the per-user channel above only ever lights
+    // up for that one person. This role-scoped channel is what actually reaches every admin and
+    // super-admin on the frontend (see NewChatMessage::broadcastOn() + routes/channels.php).
+    #[On('echo-private:staff.chat,message.sent')]
+    public function refreshStaffUnreadCount(): void
+    {
+    }
+
     // Guests have no top-level "App.Models.User.{id}" channel to listen on directly (no user id at all),
     // so GuestChatBox — a separate, nested Livewire component — bubbles this plain event up whenever its
     // own public per-conversation echo listener fires, letting the badge/ring react instantly instead of
@@ -40,9 +50,27 @@ class ChatWidget extends Component
 
     private function currentUnreadCount(): int
     {
-        return auth()->check()
-            ? auth()->user()->unreadMessagesCount()
-            : Conversation::unreadCountForGuestSession();
+        if (! auth()->check()) {
+            return Conversation::unreadCountForGuestSession();
+        }
+
+        $user = auth()->user();
+
+        // Staff's widget badge counts site-wide rather than participant-scoped — an admin is rarely
+        // the *recipient* of the threads that concern them, and User::unreadMessagesCount() would
+        // leave their badge stuck at zero. Guest-initiated threads are excluded outright to match
+        // what the frontend actually shows: a logged-in user never sees a guest chat at the frontend
+        // (ChatBox::render()), and the widget has no list for one to appear in, so counting them
+        // would ring an icon with nothing behind it. Guest messages are a /admin/chat concern.
+        if ($user->hasAnyRole(['admin', 'super-admin'])) {
+            return Message::query()
+                ->whereHas('conversation', fn ($q) => $q->whereNotNull('initiator_id'))
+                ->where(fn ($q) => $q->whereNull('sender_id')->orWhere('sender_id', '!=', $user->id))
+                ->whereNull('read_at')
+                ->count();
+        }
+
+        return $user->unreadMessagesCount();
     }
 
     public function render()

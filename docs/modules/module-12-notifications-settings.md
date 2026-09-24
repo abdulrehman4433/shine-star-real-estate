@@ -113,6 +113,48 @@ and the uploaded-files folder (the database only stores *paths* to uploads, neve
   Settings-area pattern (no new collapsible submenu introduced) — same `role:super-admin|admin` middleware
   group as every other admin route, verified unauthenticated requests to both new routes 302-redirect same
   as any other admin page.
+
+## 2026-09-24 addition: four deployment-focused System Check rows + cPanel deploy guide
+
+Added after a real "works locally, assets broken after uploading `public/build` to cPanel" report —
+each new row catches one of the four ways that class of failure actually happens, all verified by
+`php -l` + the existing suite rather than a live cPanel deploy:
+
+- **APP_URL matches this site** — compares `config('app.url')` with `request()->root()`. A
+  copy-pasted `http://localhost:8000` in the server's `.env` is invisible everywhere except in
+  uploaded-image URLs (the `public` disk's `url` in `config/filesystems.php`), i.e. "site loads but
+  every photo is a broken link". Host mismatch → **fail**; scheme/port-only mismatch (behind SSL
+  termination) → **warning**, since that's frequently a false alarm.
+- **Compiled asset files present** — parses `public/build/manifest.json` and confirms every `file`/
+  `css`/`assets` entry it references exists on disk. Catches a *partially* uploaded build (manifest
+  made it, assets didn't) and the Windows-zip-extracted-as-`build/build/…` nesting, both of which
+  present as asset 404s → HTML from `index.php` → dead module scripts. Returns **no row at all** when
+  the manifest itself is missing, because `viteBuildCheck()` already fails on that (deliberate: one
+  red row per problem, not two).
+- **No dev-server asset pointer (`public/hot`)** — a file written by `npm run dev` that makes Laravel
+  point every page's CSS/JS at `localhost:5173` if it's deployed. Warning (not fail) because its
+  presence is legitimate during local development.
+- **Debug mode** — warns when `APP_DEBUG=true` outside `local`, since error pages then print `.env`
+  values to visitors.
+
+**Matching build-side fix in `vite.config.js`:** `npm run build` now deletes `public/hot` before
+building (`remove-hot-file` plugin, `apply: 'build'` only — dev server untouched), so the deployed
+artifact can't carry a dev-server pointer even if someone forgets.
+
+**`public/.htaccess` also gained a guarded `mod_mime` block** (`.js/.mjs/.css/.woff/.woff2` → correct
+`Content-Type`) — some shared hosts ship a reduced MIME map, and a browser refuses to execute
+`<script type="module">` served with the wrong type, which reads as "JS does nothing" with a
+console MIME-type error. Wrapped in `<IfModule mod_mime.c>` so a host without mod_mime can't 500.
+
+Docs: new **`docs/DEPLOYMENT.md`** (plain step-by-step for this project's actual cPanel layout —
+`public_html/` holds the public files, app in `public_html/laravel/` — including the pre-zip commands,
+zip exclusions, the 3-line `index.php` edit, and ordered asset/media fix checks) plus
+`docs/DEPLOYMENT_SHARED_HOSTING.md` rewritten as a short extras-only list (cron, SSL, email,
+permissions, Reverb/cloudinary fallbacks), cross-linked from `MIGRATION_GUIDE.md` and the README. `.env.production` was corrected to actual production values
+(`APP_ENV=production`, `APP_DEBUG=false`, real `APP_URL`, `LOG_LEVEL=error`,
+`QUEUE_CONNECTION=sync`, and `VITE_REVERB_APP_KEY="${REVERB_APP_KEY}"` instead of the literal
+`YOUR_KEY` that any build from that file would have hardcoded into the deployed JS bundle — Vite
+loads `.env.production` over `.env` for mode `production` and expands `${VAR}` itself).
 - **Separately verified `php artisan migrate:fresh --seed` succeeds cleanly end-to-end** against a
   throwaway database (`shine_star_marketing_migration_test`, created and dropped for this check only — the
   real dev database with its accumulated real content was never touched): all 58 migrations and all 23

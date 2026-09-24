@@ -77,7 +77,8 @@
 
     <p class="text-muted small mt-3">
         {{ $passCount }} passing, {{ $warningCount }} warning{{ $warningCount === 1 ? '' : 's' }}, {{ $failCount }} failing —
-        out of {{ count($checks) }} checks. See <code>MIGRATION_GUIDE.md</code> in the project root for the full
+        out of {{ count($checks) }} checks. See <code>docs/DEPLOYMENT.md</code> for the cPanel deployment
+        walkthrough + asset troubleshooting, <code>MIGRATION_GUIDE.md</code> in the project root for the full
         setup walkthrough, and <a href="{{ route('admin.settings.backup') }}">Backup &amp; Migration</a> to download
         the database/media backups once this server is ready.
     </p>

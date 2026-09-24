@@ -5,6 +5,19 @@
 
     RewriteEngine On
 
+    # Correct Content-Type for the compiled assets in public/build/ — some shared hosts (cPanel
+    # included) ship a reduced MIME map, and a browser refuses to RUN <script type="module"> (this
+    # app's Vite bundle) or APPLY a stylesheet served with the wrong Content-Type. That shows up as
+    # "Failed to load module script: Expected a JavaScript module script but the server responded
+    # with a MIME type of ..." in the console while the page itself loads fine. Wrapped in IfModule
+    # so a host without mod_mime is unaffected.
+    <IfModule mod_mime.c>
+        AddType application/javascript .js .mjs
+        AddType text/css .css
+        AddType font/woff2 .woff2
+        AddType font/woff .woff
+    </IfModule>
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

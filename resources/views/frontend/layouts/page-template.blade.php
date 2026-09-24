@@ -57,8 +57,6 @@
     {{-- Footer: shared partial with its own inline styles --}}
     @include('frontend.partials.footer')
 
-    @livewire('frontend.chat.chat-widget')
-
     {{-- Dynamic CDN assets: footer JS --}}
     @if (! empty($cdnFooterAssets) && $cdnFooterAssets->isNotEmpty())
         @foreach ($cdnFooterAssets as $cdn)
@@ -71,6 +69,8 @@
     @include('partials.confirm-modal')
     @include('partials.toast-container')
     @include('partials.flash-to-toast')
+
+    @livewire('frontend.chat.chat-widget')
 
     @stack('scripts')
 </body>

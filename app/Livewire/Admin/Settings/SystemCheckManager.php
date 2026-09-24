@@ -55,11 +55,15 @@ class SystemCheckManager extends Component
         $checks[] = $this->composerCheck();
         $checks[] = $this->envFileCheck();
         $checks[] = $this->appKeyCheck();
+        $checks[] = $this->appUrlCheck();
         $checks[] = $this->databaseCheck();
         $checks[] = $this->writableCheck('storage/ directory', storage_path());
         $checks[] = $this->writableCheck('bootstrap/cache/ directory', base_path('bootstrap/cache'));
         $checks[] = $this->storageLinkCheck();
         $checks[] = $this->viteBuildCheck();
+        $checks = array_merge($checks, $this->manifestFilesCheck());
+        $checks[] = $this->hotFileCheck();
+        $checks[] = $this->debugModeCheck();
         $checks[] = $this->pendingMigrationsCheck();
         $checks[] = $this->reverbConfigCheck();
 
@@ -198,6 +202,40 @@ class SystemCheckManager extends Component
         }
     }
 
+    /**
+     * APP_URL is what every uploaded image's URL is built from (config/filesystems.php's public
+     * disk), so a copy-pasted localhost/wrong-domain value is the #1 cause of "site loads but every
+     * photo/logo is a broken link" after a cPanel deploy. Compared against the URL this page was
+     * actually requested through — warning rather than fail, since a reverse proxy can make the
+     * scheme differ without anything being wrong.
+     */
+    private function appUrlCheck(): array
+    {
+        $configured = rtrim((string) config('app.url'), '/');
+        $current = rtrim(request()->root(), '/');
+        $configuredHost = parse_url($configured, PHP_URL_HOST);
+        $currentHost = request()->getHost();
+        $hostsMatch = $configuredHost !== null && strcasecmp($configuredHost, $currentHost) === 0;
+
+        if ($configured === $current) {
+            return [
+                'label' => 'APP_URL matches this site',
+                'status' => 'pass',
+                'detail' => "APP_URL is {$configured}.",
+                'guidance' => null,
+            ];
+        }
+
+        return [
+            'label' => 'APP_URL matches this site',
+            'status' => $hostsMatch ? 'warning' : 'fail',
+            'detail' => "APP_URL is {$configured} but this page was requested at {$current}.",
+            'guidance' => $hostsMatch
+                ? 'Only the scheme/port differs (e.g. behind SSL termination) — usually harmless, but set APP_URL to the exact https:// URL visitors use if asset or redirect issues show up.'
+                : "Set APP_URL in .env to {$current} — uploaded images (logo, property photos, favicon) are built from it and currently point at the wrong domain, then clear config if you have SSH (`php artisan config:clear`).",
+        ];
+    }
+
     private function writableCheck(string $label, string $path): array
     {
         $ok = is_dir($path) && is_writable($path);
@@ -232,7 +270,100 @@ class SystemCheckManager extends Component
             'label' => 'Frontend assets built',
             'status' => $ok ? 'pass' : 'fail',
             'detail' => $ok ? 'public/build/manifest.json found.' : 'No compiled assets found — the site will render without CSS/JS.',
-            'guidance' => $ok ? null : 'Run `npm install` then `npm run build`.',
+            'guidance' => $ok ? null : 'Run `npm install` then `npm run build`, then upload the whole public/build folder.',
+        ];
+    }
+
+    /**
+     * Catches a PARTIALLY uploaded public/build — the usual way this happens on cPanel is zipping
+     * the folder on Windows/Mac and extracting it so it lands as public/build/build/..., or an FTP
+     * upload that timed out halfway. manifest.json alone surviving is not enough: every file it
+     * references has to exist or those requests fall through to index.php and the browser gets
+     * HTML where it expected CSS/JS.
+     *
+     * @return array<int, array{label: string, status: string, detail: string, guidance: ?string}>
+     */
+    private function manifestFilesCheck(): array
+    {
+        $manifestPath = public_path('build/manifest.json');
+
+        if (! file_exists($manifestPath)) {
+            return []; // already reported as a failure by viteBuildCheck()
+        }
+
+        $manifest = json_decode((string) file_get_contents($manifestPath), true);
+
+        if (! is_array($manifest)) {
+            return [[
+                'label' => 'Compiled asset files present',
+                'status' => 'fail',
+                'detail' => 'public/build/manifest.json exists but is not valid JSON.',
+                'guidance' => 'Re-upload the whole public/build folder — this copy is corrupt or truncated.',
+            ]];
+        }
+
+        $missing = [];
+
+        foreach ($manifest as $entry) {
+            $files = array_merge(
+                [$entry['file'] ?? null],
+                $entry['css'] ?? [],
+                $entry['assets'] ?? [],
+            );
+
+            foreach ($files as $file) {
+                if ($file !== null && ! file_exists(public_path('build/'.$file))) {
+                    $missing[] = $file;
+                }
+            }
+        }
+
+        $ok = $missing === [];
+
+        return [[
+            'label' => 'Compiled asset files present',
+            'status' => $ok ? 'pass' : 'fail',
+            'detail' => $ok
+                ? 'Every file listed in manifest.json exists in public/build/.'
+                : count($missing).' file(s) referenced by manifest.json are missing: '.implode(', ', array_slice(array_unique($missing), 0, 3)).(count($missing) > 3 ? ', …' : ''),
+            'guidance' => $ok ? null : 'public/build was only uploaded partially — delete it on the server and re-upload the entire folder as one zip, extracted server-side (File Manager → Upload → Extract) so no nested build/build/ folder is created.',
+        ]];
+    }
+
+    /**
+     * A deployed `public/hot` file (left behind by `npm run dev`) makes Laravel point every page's
+     * CSS/JS at the local dev server instead of public/build — assets load from
+     * http://localhost:5173 and silently fail for every visitor. `npm run build` now deletes this
+     * file automatically (see vite.config.js), so it should only ever be present during local dev.
+     */
+    private function hotFileCheck(): array
+    {
+        $hotFile = public_path('hot');
+        $exists = file_exists($hotFile);
+
+        return [
+            'label' => 'No dev-server asset pointer (public/hot)',
+            'status' => $exists ? 'warning' : 'pass',
+            'detail' => $exists
+                ? 'public/hot exists — assets would load from "'.trim((string) @file_get_contents($hotFile)).'" instead of the built bundle.'
+                : 'Not present — pages will use the compiled bundle in public/build/.',
+            'guidance' => $exists ? 'Expected while `npm run dev` is running locally. Delete public/hot before uploading to a server (npm run build removes it automatically).' : null,
+        ];
+    }
+
+    /** APP_DEBUG=true in production prints .env values, DB credentials and stack traces to visitors. */
+    private function debugModeCheck(): array
+    {
+        $debug = (bool) config('app.debug');
+        $isLocal = config('app.env') === 'local';
+
+        return [
+            'label' => 'Debug mode',
+            'status' => $debug && ! $isLocal ? 'warning' : 'pass',
+            'detail' => $debug ? 'APP_DEBUG=true.' : 'APP_DEBUG=false.',
+            'guidance' => $debug && ! $isLocal
+                ? 'Set APP_DEBUG=false in .env on this server — with it on, error pages expose configuration (including database credentials) to anyone who triggers an error.'
+                : null,
         ];
     }
 

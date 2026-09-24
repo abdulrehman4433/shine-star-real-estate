@@ -3,10 +3,13 @@
 namespace App\Livewire\Frontend\Chat;
 
 use App\Enums\RoleName;
+use App\Events\NewChatMessage;
 use App\Models\Conversation;
+use App\Models\Message;
 use App\Models\Property;
 use App\Models\User;
 use App\Notifications\GuestChatStarted;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -34,8 +37,18 @@ class GuestChatBox extends Component
 
         $existingId = session($this->sessionKey());
 
-        if ($existingId && Conversation::whereKey($existingId)->exists()) {
-            $this->conversationId = $existingId;
+        if ($existingId) {
+            $conversation = Conversation::whereKey($existingId)->first();
+
+            // If the conversation was closed (by admin or guest), clear the session and
+            // show the fresh form — the guest always sees the input form, never a closed thread.
+            if (! $conversation || $conversation->isClosed()) {
+                session()->forget($this->sessionKey());
+
+                return;
+            }
+
+            $this->conversationId = $conversation->id;
             $this->step = 'thread';
         }
     }
@@ -51,8 +64,8 @@ class GuestChatBox extends Component
     {
         $this->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
-            'phone' => 'nullable|string|max:30',
+            'email' => 'nullable|email|max:255',
+            'phone' => 'required|string|max:30',
             'message' => 'required|string|min:2|max:2000',
         ]);
 
@@ -69,16 +82,18 @@ class GuestChatBox extends Component
 
         $conversation = Conversation::findOrStartGuest([
             'name' => $this->name,
-            'email' => $this->email,
+            'email' => $this->email ?: null,
             'phone' => $this->phone,
         ], $recipient, $property);
 
-        $conversation->messages()->create([
+        $message = $conversation->messages()->create([
             'sender_id' => null,
             'body' => $this->message,
         ]);
 
         $conversation->update(['last_message_at' => now()]);
+
+        $this->broadcastMessage($message);
 
         session([$this->sessionKey() => $conversation->id]);
 
@@ -101,39 +116,53 @@ class GuestChatBox extends Component
 
         $conversation = Conversation::findOrFail($this->conversationId);
 
+        // If the conversation was closed (e.g. by admin while the guest was typing),
+        // clear the session and show the fresh form instead of silently doing nothing.
         if ($conversation->isClosed()) {
+            session()->forget($this->sessionKey());
+            $this->reset(['conversationId', 'step', 'body']);
+
             return;
         }
 
-        $conversation->messages()->create([
+        $message = $conversation->messages()->create([
             'sender_id' => null,
             'body' => $this->body,
         ]);
 
         $conversation->update(['last_message_at' => now()]);
 
+        $this->broadcastMessage($message);
+
         $this->notifyStaff($conversation, $conversation->recipient, $this->body);
 
         $this->reset(['body']);
     }
 
+    /** The guest -> staff direction was the only send path in the app that never broadcast: both
+     *  ChatBox::send() (logged-in) and Admin\Chat\Manager::sendReply() already fired NewChatMessage,
+     *  so a guest's message reached nobody in real time — not the addressed recipient, not the other
+     *  admins on the frontend widget — and only ever surfaced via polling. Same channels as
+     *  everywhere else: the per-conversation private channel, the recipient's user channel, the
+     *  role-scoped staff.chat channel, plus the public per-conversation channel this component's own
+     *  messageReceivedLive() listener rides on. */
+    private function broadcastMessage(Message $message): void
+    {
+        try {
+            broadcast(new NewChatMessage($message))->toOthers();
+        } catch (\Throwable $e) {
+            Log::warning('Chat broadcast failed, message was still saved: '.$e->getMessage());
+        }
+    }
+
     /** Either side can close a conversation (see Conversation::close()'s doc comment) — for the guest,
-     *  closing also forgets the session key and returns to the start-chat form, so the widget is ready
-     *  for a genuinely new conversation next time rather than silently resuming the now-closed one. */
+     *  closing forgets the session key and returns to the start-chat form immediately. */
     public function closeChat(): void
     {
         if ($this->conversationId) {
             Conversation::find($this->conversationId)?->close();
         }
 
-        session()->forget($this->sessionKey());
-        $this->reset(['conversationId', 'step', 'name', 'email', 'phone', 'message', 'body']);
-    }
-
-    /** Explicit "start a new chat" action from the closed-conversation state (see the view) — same
-     *  session-forgetting reset as closeChat(), without re-closing an already-closed conversation. */
-    public function startNewChat(): void
-    {
         session()->forget($this->sessionKey());
         $this->reset(['conversationId', 'step', 'name', 'email', 'phone', 'message', 'body']);
     }
@@ -189,6 +218,16 @@ class GuestChatBox extends Component
         $activeConversation = $this->conversationId
             ? Conversation::with(['messages.sender', 'property'])->find($this->conversationId)
             : null;
+
+        // mount() only checks for a closed thread on the initial page load, so if an admin closes
+        // the conversation while the guest has the panel open, the guest would otherwise keep seeing
+        // the finished thread (and its composer) until a full reload. Drop back to the start form —
+        // exactly the state mount() lands in when it finds the session pointing at a closed thread.
+        if ($activeConversation && $activeConversation->isClosed()) {
+            session()->forget($this->sessionKey());
+            $this->reset(['conversationId', 'step', 'body']);
+            $activeConversation = null;
+        }
 
         return view('livewire.frontend.chat.guest-chat-box', [
             'activeConversation' => $activeConversation,

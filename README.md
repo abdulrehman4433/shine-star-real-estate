@@ -7,6 +7,17 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## Deployment (cPanel / shared hosting)
+
+The whole process — build locally, zip, place files in `public_html/` vs `public_html/laravel/`,
+`.env`, storage symlink, and the **asset/media fix checks** — is in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+Extra shared-hosting settings (cron, SSL, email, permissions): [`docs/DEPLOYMENT_SHARED_HOSTING.md`](docs/DEPLOYMENT_SHARED_HOSTING.md);
+server-to-server moves: [`MIGRATION_GUIDE.md`](MIGRATION_GUIDE.md).
+
+After every deploy, run **Admin → Settings → System Requirements Check** — it catches the usual
+post-deploy breakages (missing/partial `public/build`, a deployed `public/hot` dev-server file,
+`APP_URL` not matching the live domain, missing `public/storage` symlink, `APP_DEBUG` left on).
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:

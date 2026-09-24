@@ -118,13 +118,27 @@
                             <div class="mb-3">
                                 <label class="form-label">Photo (optional)</label>
                                 @if ($existingPhotoUrl)
-                                    <div class="mb-2">
-                                        <img src="{{ $existingPhotoUrl }}" alt="" class="rounded-circle" style="width: 48px; height: 48px; object-fit: cover;">
+                                    <div class="mb-2 d-flex align-items-center gap-2">
+                                        <img src="{{ $existingPhotoUrl }}" alt="Current photo"
+                                            class="rounded-circle" style="width: 48px; height: 48px; object-fit: cover; flex-shrink: 0;">
+                                        <button type="button" class="btn btn-sm btn-outline-danger"
+                                            @click="$store.confirm.open({ message: 'Remove this photo?' }).then(ok => ok && $wire.removePhoto())">
+                                            <i class="bi bi-trash"></i> Remove
+                                        </button>
                                     </div>
                                 @endif
-                                <input type="file" wire:model="photo" class="form-control @error('photo') is-invalid @enderror">
+                                <input type="file" wire:model="photo" accept="image/*" class="form-control @error('photo') is-invalid @enderror">
                                 @error('photo') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                 <div wire:loading wire:target="photo" class="small text-muted mt-1">Uploading...</div>
+                                @if ($photoPreviewUrl)
+                                    <div class="small text-muted mt-1 mb-1">Will replace the photo above:</div>
+                                    <img src="{{ $photoPreviewUrl }}" alt="New photo preview"
+                                        class="rounded-circle" style="width: 48px; height: 48px; object-fit: cover;">
+                                @elseif ($photoOriginalName)
+                                    <div class="small text-muted mt-1 text-truncate" title="{{ $photoOriginalName }}">
+                                        Will replace the photo above: {{ $photoOriginalName }}
+                                    </div>
+                                @endif
                             </div>
 
                             <div class="form-check form-switch">

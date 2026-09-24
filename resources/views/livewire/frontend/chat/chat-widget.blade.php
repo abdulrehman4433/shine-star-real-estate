@@ -1,7 +1,7 @@
 <div
     x-data="{ open: false }"
     wire:poll.15s="$refresh"
-    style="position: fixed; bottom: 20px; right: 20px; z-index: 1050; display: flex; flex-direction: column; align-items: flex-end;"
+    style="position: fixed; bottom: 40px; right: 20px; z-index: 1050; display: flex; flex-direction: column; align-items: flex-end;"
 >
     <div class="ssm-chat-widget mb-2" style="width: 340px; height: 480px;" x-show="open" x-cloak x-transition>
         <div class="ssm-chat-widget__header">
@@ -16,6 +16,18 @@
             @endauth
         </div>
     </div>
+
+    {{-- Sits between the popup and the chat toggle so it always renders directly above the chat
+         icon — with the popup closed (the usual case) it's simply the top of the two buttons.
+         Plain anchor, no Livewire round-trip. digits-only number, per the wa.me format. --}}
+    <a href="https://wa.me/923355117928"
+        target="_blank" rel="noopener"
+        class="ssm-whatsapp-toggle"
+        style="margin-bottom: 16px;"
+        title="Chat on WhatsApp"
+        aria-label="Chat on WhatsApp">
+        <i class="bi bi-whatsapp" aria-hidden="true"></i>
+    </a>
 
     <button type="button"
         x-data="{ ring: false }"

@@ -1,5 +1,9 @@
 # Migration Guide — Moving Shine Star Marketing to a New Server
 
+> Installing onto cPanel/shared hosting from scratch (rather than migrating an existing install)?
+> Follow **`docs/DEPLOYMENT.md`** — it's the short build → upload → verify checklist and includes an
+> "assets not loading" troubleshooting table; the steps below are the fuller version of the same job.
+
 This app stores its content two ways: **database rows** (pages, header/menu/footer, CDN links,
 properties, projects, blog posts, reviews, settings, users, chat history — everything editable from the
 admin panel) and **uploaded files on disk** (property/project photos, brochures, review photos, the site
