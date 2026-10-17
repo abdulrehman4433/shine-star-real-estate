@@ -5,7 +5,7 @@ namespace App\Livewire\Admin\Projects;
 use App\Enums\ProjectType;
 use App\Livewire\Concerns\Notifies;
 use App\Models\Project;
-use App\Models\ProjectPlotSize;
+use App\Models\ProjectBlock;
 use App\Models\PropertyAmenity;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
@@ -40,7 +40,11 @@ class Form extends Component
 
     public string $contactEmail = '';
 
-    public string $videoUrl = '';
+    /** Repeatable rows of external video links (YouTube/Vimeo share URLs). */
+    public array $videoLinks = [];
+
+    /** Newly attached video files (Spatie temporary uploads, saved into the 'videos' collection). */
+    public array $videoFiles = [];
 
     public bool $isFeatured = false;
 
@@ -48,9 +52,21 @@ class Form extends Component
 
     public array $selectedAmenities = [];
 
+    /** Each row: ['id' => int|null, 'name', 'description',
+     *  'plot_sizes' => [[size_value, unit, category, bedrooms, bathrooms,
+     *                    'payment_options' => [[key, value], ...]], ...]] */
     public array $blocks = [];
 
-    public array $plotSizes = [];
+    /** Staged block media keyed by block row index: blockImages[i][] = TemporaryUploadedFile.
+     *  Attached to the persisted block during save(). */
+    public array $blockImages = [];
+
+    public array $blockVideos = [];
+
+    public array $blockPdfs = [];
+
+    /** External video links per block row index: blockVideoUrls[i][] = url string. */
+    public array $blockVideoUrls = [];
 
     public $coverImage = null;
 
@@ -81,40 +97,35 @@ class Form extends Component
             $this->lng = $project->lng ? (float) $project->lng : null;
             $this->contactPhone = (string) $project->contact_phone;
             $this->contactEmail = (string) $project->contact_email;
-            $this->videoUrl = (string) $project->video_url;
+            $this->videoLinks = $project->videoLinks();
             $this->isFeatured = $project->is_featured;
             $this->isActive = $project->is_active;
             $this->selectedAmenities = $project->amenities->pluck('id')->map(fn ($id) => (string) $id)->all();
 
-            $blocks = $project->blocks;
-            $this->blocks = $blocks->map(fn ($b) => [
-                'name' => $b->name,
-                'description' => (string) $b->description,
-            ])->all();
+            $this->blocks = [];
+            $this->blockVideoUrls = [];
 
-            $blockIndexById = [];
-            foreach ($blocks as $index => $block) {
-                $blockIndexById[$block->id] = $index;
+            foreach ($project->blocks as $block) {
+                $this->blocks[] = [
+                    'id' => $block->id,
+                    'name' => $block->name,
+                    'description' => (string) $block->description,
+                    'plot_sizes' => collect($block->plot_sizes ?? [])->map(fn ($row) => [
+                        'size_value' => (string) ($row['size_value'] ?? ''),
+                        'unit' => $row['unit'] ?? 'marla',
+                        'category' => (string) ($row['category'] ?? ''),
+                        'bedrooms' => (string) ($row['bedrooms'] ?? ''),
+                        'bathrooms' => (string) ($row['bathrooms'] ?? ''),
+                        'payment_options' => collect($row['payment_options'] ?? [])->map(fn ($option) => [
+                            'key' => (string) ($option['key'] ?? ''),
+                            'value' => (string) ($option['value'] ?? ''),
+                        ])->values()->all(),
+                    ])->values()->all(),
+                ];
+
+                $links = $block->videoLinkRows();
+                $this->blockVideoUrls[] = $links === [] ? [''] : $links;
             }
-
-            $this->plotSizes = $project->plotSizes->map(fn ($p) => [
-                'block_index' => $p->project_block_id !== null && isset($blockIndexById[$p->project_block_id])
-                    ? (string) $blockIndexById[$p->project_block_id]
-                    : '',
-                'size_value' => (string) $p->size_value,
-                'unit' => $p->unit,
-                'category' => (string) $p->category,
-                'bedrooms' => (string) $p->bedrooms,
-                'bathrooms' => (string) $p->bathrooms,
-                'total_price' => (string) $p->total_price,
-                'booking_amount' => (string) $p->booking_amount,
-                'confirmation_amount' => (string) $p->confirmation_amount,
-                'installment_amount' => (string) $p->installment_amount,
-                'installment_count' => (string) $p->installment_count,
-                'installment_frequency' => (string) $p->installment_frequency,
-                'possession_amount' => (string) $p->possession_amount,
-                'notes' => (string) $p->notes,
-            ])->all();
 
             $this->seoMetaTitle = (string) $project->seo?->meta_title;
             $this->seoMetaDescription = (string) $project->seo?->meta_description;
@@ -122,32 +133,24 @@ class Form extends Component
             $this->seoCanonicalUrl = (string) $project->seo?->canonical_url;
         }
 
-        if (empty($this->blocks)) {
-            $this->blocks = [['name' => '', 'description' => '']];
+        if (empty($this->videoLinks)) {
+            $this->videoLinks = [''];
         }
 
-        if (empty($this->plotSizes)) {
-            $this->plotSizes = [$this->emptyPlotSizeRow()];
+        if (empty($this->blocks)) {
+            $this->blocks = [$this->emptyBlockRow()];
+            // One row per block, each row an array of URL slots — never a flat string list.
+            $this->blockVideoUrls = [['']];
         }
     }
 
-    private function emptyPlotSizeRow(): array
+    private function emptyBlockRow(): array
     {
         return [
-            'block_index' => '',
-            'size_value' => '',
-            'unit' => 'marla',
-            'category' => '',
-            'bedrooms' => '',
-            'bathrooms' => '',
-            'total_price' => '',
-            'booking_amount' => '',
-            'confirmation_amount' => '',
-            'installment_amount' => '',
-            'installment_count' => '',
-            'installment_frequency' => '',
-            'possession_amount' => '',
-            'notes' => '',
+            'id' => null,
+            'name' => '',
+            'description' => '',
+            'plot_sizes' => [],
         ];
     }
 
@@ -165,28 +168,40 @@ class Form extends Component
             'lng' => 'nullable|numeric|between:-180,180',
             'contactPhone' => 'nullable|string|max:50',
             'contactEmail' => 'nullable|email|max:255',
-            'videoUrl' => 'nullable|url|max:255',
+            'videoLinks' => 'array',
+            'videoLinks.*' => 'nullable|url|max:255',
+            'videoFiles' => 'array',
+            'videoFiles.*' => 'required|file|mimetypes:video/mp4,video/webm,video/ogg,video/quicktime,video/x-msvideo,video/x-ms-wmv|max:51200',
             'coverImage' => 'nullable|image|max:4096',
             'galleryImages.*' => 'nullable|image|max:4096',
             'brochure' => 'nullable|mimes:pdf|max:10240',
             'selectedAmenities' => 'array',
             'selectedAmenities.*' => 'exists:property_amenities,id',
+            'blocks' => 'array',
+            'blocks.*.id' => 'nullable|integer',
             'blocks.*.name' => 'nullable|string|max:255',
             'blocks.*.description' => 'nullable|string|max:1000',
-            'plotSizes.*.block_index' => 'nullable|string',
-            'plotSizes.*.size_value' => 'nullable|numeric|min:0',
-            'plotSizes.*.unit' => 'nullable|in:marla,kanal,sqft',
-            'plotSizes.*.category' => 'nullable|string|max:255',
-            'plotSizes.*.bedrooms' => 'nullable|integer|min:0|max:20',
-            'plotSizes.*.bathrooms' => 'nullable|integer|min:0|max:20',
-            'plotSizes.*.total_price' => 'nullable|numeric|min:0',
-            'plotSizes.*.booking_amount' => 'nullable|numeric|min:0',
-            'plotSizes.*.confirmation_amount' => 'nullable|numeric|min:0',
-            'plotSizes.*.installment_amount' => 'nullable|numeric|min:0',
-            'plotSizes.*.installment_count' => 'nullable|integer|min:0',
-            'plotSizes.*.installment_frequency' => 'nullable|in:monthly,quarterly,half_yearly,yearly',
-            'plotSizes.*.possession_amount' => 'nullable|numeric|min:0',
-            'plotSizes.*.notes' => 'nullable|string|max:1000',
+            'blocks.*.plot_sizes' => 'array',
+            'blocks.*.plot_sizes.*.size_value' => 'nullable|numeric|min:0',
+            'blocks.*.plot_sizes.*.unit' => 'nullable|in:marla,kanal,sqft',
+            'blocks.*.plot_sizes.*.category' => 'nullable|string|max:255',
+            'blocks.*.plot_sizes.*.bedrooms' => 'nullable|integer|min:0|max:20',
+            'blocks.*.plot_sizes.*.bathrooms' => 'nullable|integer|min:0|max:20',
+            'blocks.*.plot_sizes.*.payment_options' => 'array',
+            'blocks.*.plot_sizes.*.payment_options.*.key' => 'nullable|string|max:255',
+            'blocks.*.plot_sizes.*.payment_options.*.value' => 'nullable|string|max:255',
+            'blockVideoUrls' => 'array',
+            'blockVideoUrls.*' => 'array',
+            'blockVideoUrls.*.*' => 'nullable|url|max:255',
+            'blockImages' => 'array',
+            'blockImages.*' => 'array',
+            'blockImages.*.*' => 'nullable|image|max:4096',
+            'blockVideos' => 'array',
+            'blockVideos.*' => 'array',
+            'blockVideos.*.*' => 'required|file|mimetypes:video/mp4,video/webm,video/ogg,video/quicktime,video/x-msvideo,video/x-ms-wmv|max:51200',
+            'blockPdfs' => 'array',
+            'blockPdfs.*' => 'array',
+            'blockPdfs.*.*' => 'required|file|mimes:pdf|max:10240',
             'seoMetaTitle' => 'nullable|string|max:255',
             'seoMetaDescription' => 'nullable|string|max:255',
             'seoMetaKeywords' => 'nullable|string|max:255',
@@ -202,7 +217,8 @@ class Form extends Component
 
     public function addBlockRow(): void
     {
-        $this->blocks[] = ['name' => '', 'description' => ''];
+        $this->blocks[] = $this->emptyBlockRow();
+        $this->blockVideoUrls[] = [''];
     }
 
     public function removeBlockRow(int $index): void
@@ -210,28 +226,77 @@ class Form extends Component
         unset($this->blocks[$index]);
         $this->blocks = array_values($this->blocks);
 
-        foreach ($this->plotSizes as $i => $row) {
-            if ($row['block_index'] === '') {
-                continue;
-            }
-
-            if ((int) $row['block_index'] === $index) {
-                $this->plotSizes[$i]['block_index'] = '';
-            } elseif ((int) $row['block_index'] > $index) {
-                $this->plotSizes[$i]['block_index'] = (string) ((int) $row['block_index'] - 1);
-            }
+        // Keep the staged-media arrays (and video-link rows) in step with the block rows they belong to.
+        foreach (['blockImages', 'blockVideos', 'blockPdfs', 'blockVideoUrls'] as $property) {
+            unset($this->{$property}[$index]);
+            $this->{$property} = array_values($this->{$property});
         }
     }
 
-    public function addPlotSizeRow(): void
+    public function addPlotSizeRow(int $blockIndex): void
     {
-        $this->plotSizes[] = $this->emptyPlotSizeRow();
+        $this->blocks[$blockIndex]['plot_sizes'][] = [
+            'size_value' => '',
+            'unit' => 'marla',
+            'category' => '',
+            'bedrooms' => '',
+            'bathrooms' => '',
+            'payment_options' => [],
+        ];
     }
 
-    public function removePlotSizeRow(int $index): void
+    public function removePlotSizeRow(int $blockIndex, int $rowIndex): void
     {
-        unset($this->plotSizes[$index]);
-        $this->plotSizes = array_values($this->plotSizes);
+        unset($this->blocks[$blockIndex]['plot_sizes'][$rowIndex]);
+        $this->blocks[$blockIndex]['plot_sizes'] = array_values($this->blocks[$blockIndex]['plot_sizes']);
+    }
+
+    /** Add one dynamic key/value row to ONE size option (payment is per-size). */
+    public function addSizePaymentRow(int $blockIndex, int $sizeIndex): void
+    {
+        $this->blocks[$blockIndex]['plot_sizes'][$sizeIndex]['payment_options'] ??= [];
+        $this->blocks[$blockIndex]['plot_sizes'][$sizeIndex]['payment_options'][] = ['key' => '', 'value' => ''];
+    }
+
+    public function removeSizePaymentRow(int $blockIndex, int $sizeIndex, int $optionIndex): void
+    {
+        unset($this->blocks[$blockIndex]['plot_sizes'][$sizeIndex]['payment_options'][$optionIndex]);
+        $this->blocks[$blockIndex]['plot_sizes'][$sizeIndex]['payment_options'] = array_values($this->blocks[$blockIndex]['plot_sizes'][$sizeIndex]['payment_options']);
+    }
+
+    public function addBlockVideoUrlRow(int $blockIndex): void
+    {
+        $this->blockVideoUrls[$blockIndex][] = '';
+    }
+
+    public function removeBlockVideoUrlRow(int $blockIndex, int $urlIndex): void
+    {
+        unset($this->blockVideoUrls[$blockIndex][$urlIndex]);
+        $this->blockVideoUrls[$blockIndex] = array_values($this->blockVideoUrls[$blockIndex]);
+    }
+
+    public function removeBlockMedia(int $blockId, int $mediaId): void
+    {
+        $block = $this->projectId
+            ? Project::find($this->projectId)?->blocks()->whereKey($blockId)->first()
+            : null;
+
+        $block?->media()
+            ->where('id', $mediaId)
+            ->where('collection_name', 'like', 'block_%')
+            ->first()?->delete();
+    }
+
+    public function removePendingBlockFile(int $blockIndex, int $fileIndex, string $kind): void
+    {
+        $property = ['images' => 'blockImages', 'videos' => 'blockVideos', 'pdfs' => 'blockPdfs'][$kind] ?? null;
+
+        if ($property === null || ! isset($this->{$property}[$blockIndex][$fileIndex])) {
+            return;
+        }
+
+        unset($this->{$property}[$blockIndex][$fileIndex]);
+        $this->{$property}[$blockIndex] = array_values($this->{$property}[$blockIndex]);
     }
 
     public function removeGalleryImage(int $mediaId): void
@@ -240,9 +305,34 @@ class Form extends Component
         $project->media()->where('id', $mediaId)->where('collection_name', 'gallery')->first()?->delete();
     }
 
+    public function addVideoLinkRow(): void
+    {
+        $this->videoLinks[] = '';
+    }
+
+    public function removeVideoLinkRow(int $index): void
+    {
+        unset($this->videoLinks[$index]);
+        $this->videoLinks = array_values($this->videoLinks);
+    }
+
+    public function removeExistingVideo(int $mediaId): void
+    {
+        $project = Project::findOrFail($this->projectId);
+        $project->media()->where('id', $mediaId)->where('collection_name', 'videos')->first()?->delete();
+    }
+
     public function save()
     {
         $this->validate();
+
+        // Trim + drop empty repeater rows; the cleaned list drives both the multi-value
+        // video_urls column and the legacy video_url column (kept as "the first link"
+        // so anything still reading the single column stays correct).
+        $videoLinks = array_values(array_filter(
+            array_map(fn ($url) => trim((string) $url), $this->videoLinks),
+            fn ($url) => $url !== '',
+        ));
 
         $project = $this->projectId
             ? Project::findOrFail($this->projectId)
@@ -260,56 +350,61 @@ class Form extends Component
             'lng' => $this->lng,
             'contact_phone' => $this->contactPhone ?: null,
             'contact_email' => $this->contactEmail ?: null,
-            'video_url' => $this->videoUrl ?: null,
+            'video_url' => $videoLinks[0] ?? null,
+            'video_urls' => $videoLinks,
             'is_featured' => $this->isFeatured,
             'is_active' => $this->isActive,
         ])->save();
 
         $project->amenities()->sync($this->selectedAmenities);
 
-        // Plot sizes reference blocks by FK, so clear both, recreate blocks first,
-        // then remap each plot size's local row-index back to a real block_id.
-        $project->plotSizes()->delete();
-        $project->blocks()->delete();
+        // Blocks are UPSERTED — not deleted-and-recreated like the old design — because each
+        // block now owns media files and its id must survive an unrelated edit. Rows removed
+        // from the form are deleted individually below so every model's deleting event fires
+        // (a bulk ->delete() would skip Spatie's per-model media cleanup and orphan files).
+        $incomingBlockIds = [];
 
-        $blockIdByIndex = [];
-        foreach ($this->blocks as $index => $block) {
-            if (trim($block['name'] ?? '') === '') {
+        foreach ($this->blocks as $index => $row) {
+            if (trim($row['name'] ?? '') === '') {
                 continue;
             }
 
-            $created = $project->blocks()->create([
-                'name' => $block['name'],
-                'description' => $block['description'] ?: null,
+            $attributes = [
+                'name' => $row['name'],
+                'description' => ($row['description'] ?? '') ?: null,
                 'order' => $index,
-            ]);
+                'plot_sizes' => $this->cleanPlotSizes($row['plot_sizes'] ?? []),
+                'video_urls' => array_values(array_filter(
+                    array_map(fn ($url) => trim((string) $url), $this->blockVideoUrls[$index] ?? []),
+                    fn ($url) => $url !== '',
+                )),
+            ];
 
-            $blockIdByIndex[$index] = $created->id;
-        }
+            $block = ! empty($row['id']) ? $project->blocks()->whereKey($row['id'])->first() : null;
 
-        foreach ($this->plotSizes as $index => $row) {
-            if ($row['size_value'] === '' || $row['size_value'] === null) {
-                continue;
+            if ($block) {
+                $block->update($attributes);
+            } else {
+                $block = $project->blocks()->create($attributes);
             }
 
-            $project->plotSizes()->create([
-                'project_block_id' => $row['block_index'] !== '' ? ($blockIdByIndex[(int) $row['block_index']] ?? null) : null,
-                'size_value' => $row['size_value'],
-                'unit' => $row['unit'] ?: 'marla',
-                'category' => $row['category'] ?: null,
-                'bedrooms' => $row['bedrooms'] ?: null,
-                'bathrooms' => $row['bathrooms'] ?: null,
-                'total_price' => $row['total_price'] ?: null,
-                'booking_amount' => $row['booking_amount'] ?: null,
-                'confirmation_amount' => $row['confirmation_amount'] ?: null,
-                'installment_amount' => $row['installment_amount'] ?: null,
-                'installment_count' => $row['installment_count'] ?: null,
-                'installment_frequency' => $row['installment_frequency'] ?: null,
-                'possession_amount' => $row['possession_amount'] ?: null,
-                'notes' => $row['notes'] ?: null,
-                'order' => $index,
-            ]);
+            $incomingBlockIds[] = $block->id;
+
+            foreach (['blockImages' => 'block_images', 'blockVideos' => 'block_videos', 'blockPdfs' => 'block_pdfs'] as $property => $collection) {
+                foreach ($this->{$property}[$index] ?? [] as $file) {
+                    $block->addMedia($file->getRealPath())
+                        ->usingFileName($file->getClientOriginalName())
+                        ->toMediaCollection($collection);
+                }
+
+                $this->{$property}[$index] = [];
+            }
         }
+
+        $project->blocks()
+            ->when($incomingBlockIds, fn ($query) => $query->whereNotIn('id', $incomingBlockIds))
+            ->get()
+            ->each->delete();
 
         if ($this->coverImage) {
             $project->addMedia($this->coverImage->getRealPath())
@@ -329,6 +424,12 @@ class Form extends Component
                 ->toMediaCollection('brochure');
         }
 
+        foreach ($this->videoFiles as $video) {
+            $project->addMedia($video->getRealPath())
+                ->usingFileName($video->getClientOriginalName())
+                ->toMediaCollection('videos');
+        }
+
         $project->updateSeo([
             'meta_title' => $this->seoMetaTitle ?: null,
             'meta_description' => $this->seoMetaDescription ?: null,
@@ -343,16 +444,61 @@ class Form extends Component
         return redirect()->route('admin.projects.index');
     }
 
+    /** Drop empty size rows; keep only known fields/types so stale keys never reach the JSON column.
+     *  Each size carries its own cleaned dynamic key/value payment rows. */
+    private function cleanPlotSizes(array $rows): array
+    {
+        return collect($rows)
+            ->filter(fn ($row) => ($row['size_value'] ?? '') !== '' && $row['size_value'] !== null)
+            ->map(fn ($row) => [
+                'size_value' => (float) $row['size_value'],
+                'unit' => in_array($row['unit'] ?? '', array_keys(ProjectBlock::UNITS), true) ? $row['unit'] : 'marla',
+                'category' => ($row['category'] ?? '') !== '' ? $row['category'] : null,
+                'bedrooms' => ($row['bedrooms'] ?? '') !== '' ? (int) $row['bedrooms'] : null,
+                'bathrooms' => ($row['bathrooms'] ?? '') !== '' ? (int) $row['bathrooms'] : null,
+                'payment_options' => $this->cleanPaymentOptions($row['payment_options'] ?? []),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /** Keep rows that have at least one non-empty side; fully-empty rows are just add-row spacers. */
+    private function cleanPaymentOptions(array $rows): array
+    {
+        return collect($rows)
+            ->filter(fn ($row) => trim((string) ($row['key'] ?? '')) !== '' || trim((string) ($row['value'] ?? '')) !== '')
+            ->map(fn ($row) => [
+                'key' => trim((string) ($row['key'] ?? '')),
+                'value' => trim((string) ($row['value'] ?? '')),
+            ])
+            ->values()
+            ->all();
+    }
+
     public function render()
     {
+        $project = $this->projectId ? Project::find($this->projectId) : null;
+
+        $blockMedia = collect();
+        if ($project) {
+            $blockMedia = $project->blocks->mapWithKeys(fn ($b) => [
+                $b->id => [
+                    'images' => $b->getMedia('block_images'),
+                    'videos' => $b->getMedia('block_videos'),
+                    'pdfs' => $b->getMedia('block_pdfs'),
+                ],
+            ]);
+        }
+
         return view('livewire.admin.projects.form', [
             'amenities' => PropertyAmenity::query()->active()->orderBy('order')->get(),
             'existingGallery' => $this->projectId ? Project::find($this->projectId)?->getMedia('gallery') : collect(),
             'existingCoverUrl' => $this->projectId ? Project::find($this->projectId)?->cover_thumb_url : null,
             'existingBrochureUrl' => $this->projectId ? Project::find($this->projectId)?->brochure_url : null,
+            'existingVideos' => $this->projectId ? Project::find($this->projectId)?->getMedia('videos') : collect(),
+            'blockMedia' => $blockMedia,
             'types' => ProjectType::cases(),
-            'units' => ProjectPlotSize::UNITS,
-            'installmentFrequencies' => ProjectPlotSize::INSTALLMENT_FREQUENCIES,
+            'units' => ProjectBlock::UNITS,
         ])->extends('admin.layouts.app')->section('content');
     }
 }

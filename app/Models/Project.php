@@ -33,6 +33,7 @@ class Project extends Model implements HasMedia
         'contact_phone',
         'contact_email',
         'video_url',
+        'video_urls',
         'is_featured',
         'is_active',
         'order',
@@ -43,9 +44,21 @@ class Project extends Model implements HasMedia
         return [
             'lat' => 'decimal:7',
             'lng' => 'decimal:7',
+            'video_urls' => 'array',
             'is_featured' => 'boolean',
             'is_active' => 'boolean',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        // Blocks are DB-cascaded when a project is deleted (project_blocks.project_id has
+        // cascadeOnDelete), and a DB-level cascade fires no model events — which would orphan
+        // each block's media rows/files now that blocks own media. Delete them as models first
+        // so Spatie's per-model cleanup runs for every block before the project row goes.
+        static::deleting(function (Project $project) {
+            $project->blocks()->get()->each->delete();
+        });
     }
 
     public function getSlugOptions(): SlugOptions
@@ -65,13 +78,20 @@ class Project extends Model implements HasMedia
         $this->addMediaCollection('cover')->singleFile();
         $this->addMediaCollection('gallery');
         $this->addMediaCollection('brochure')->singleFile();
+        $this->addMediaCollection('videos');
     }
 
     public function registerMediaConversions(?Media $media = null): void
     {
+        // Scoped to the image collections only: without performOnCollections() Spatie would also
+        // try to build a thumb from uploaded video files (via its FFMpeg-backed Video generator),
+        // which fatals on any host without the ffmpeg binaries installed — right after the original
+        // file was already saved, i.e. the same silent "half-succeed" failure mode the
+        // addMediaFromUrl memory-limit gotcha causes (see docs/modules/module-14-projects.md).
         $this->addMediaConversion('thumb')
             ->fit(Fit::Crop, 480, 320)
-            ->nonQueued();
+            ->nonQueued()
+            ->performOnCollections('cover', 'gallery');
     }
 
     public function getCoverUrlAttribute(): ?string
@@ -89,34 +109,52 @@ class Project extends Model implements HasMedia
         return $this->getFirstMediaUrl('brochure') ?: null;
     }
 
-    /** Convert a plain YouTube/Vimeo watch URL into its embeddable iframe-src form, so the stored
-     *  video_url can be pasted in the normal "share" format instead of requiring an already-built
-     *  embed URL. Returns null if video_url isn't set or doesn't match a known host. */
-    public function getVideoEmbedUrlAttribute(): ?string
+    /** Every video link for this project. Prefers the multi-value video_urls column (the source of
+     *  truth since the multi-video editor was added); falls back to the legacy single video_url
+     *  column for rows saved before it existed. Returns a plain, non-empty-string-only list. */
+    public function videoLinks(): array
     {
-        if (! $this->video_url) {
-            return null;
+        $links = array_values(array_filter($this->video_urls ?? [], fn ($url) => is_string($url) && trim($url) !== ''));
+
+        if ($links !== []) {
+            return $links;
         }
 
-        if (preg_match('/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]+)/', $this->video_url, $m)) {
+        return $this->video_url ? [$this->video_url] : [];
+    }
+
+    /** Embeddable iframe src for every video link (YouTube/Vimeo share links converted). */
+    public function getVideoEmbedUrlsAttribute(): array
+    {
+        return array_map(fn ($url) => self::embedUrlFor($url), $this->videoLinks());
+    }
+
+    /** First video's embed src, kept for back-compat with the original single-video rendering. */
+    public function getVideoEmbedUrlAttribute(): ?string
+    {
+        return $this->getVideoEmbedUrlsAttribute()[0] ?? null;
+    }
+
+    /** Convert a plain YouTube/Vimeo watch URL into its embeddable iframe-src form, so a stored
+     *  video link can be pasted in the normal "share" format instead of requiring an already-built
+     *  embed URL. Non-YouTube/Vimeo URLs (e.g. a direct file link) are returned unchanged.
+     *  Public static so ProjectBlock (which stores its own video links) can reuse it. */
+    public static function embedUrlFor(string $url): string
+    {
+        if (preg_match('/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]+)/', $url, $m)) {
             return 'https://www.youtube.com/embed/'.$m[1];
         }
 
-        if (preg_match('/vimeo\.com\/(\d+)/', $this->video_url, $m)) {
+        if (preg_match('/vimeo\.com\/(\d+)/', $url, $m)) {
             return 'https://player.vimeo.com/video/'.$m[1];
         }
 
-        return $this->video_url;
+        return $url;
     }
 
     public function blocks(): HasMany
     {
         return $this->hasMany(ProjectBlock::class)->orderBy('order');
-    }
-
-    public function plotSizes(): HasMany
-    {
-        return $this->hasMany(ProjectPlotSize::class)->orderBy('order');
     }
 
     public function amenities(): BelongsToMany

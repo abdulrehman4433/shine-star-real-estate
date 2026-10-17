@@ -59,7 +59,7 @@ class Manager extends Component
                     ->orWhere('society_name', 'like', "%{$this->search}%");
             }))
             ->when($this->typeFilter, fn ($q) => $q->where('type', $this->typeFilter))
-            ->withCount(['blocks', 'plotSizes'])
+            ->withCount('blocks')
             ->orderBy('order')
             ->paginate(20);
 

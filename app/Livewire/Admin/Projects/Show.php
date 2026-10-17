@@ -16,12 +16,12 @@ class Show extends Component
 
     public function render()
     {
-        $this->project->loadMissing(['blocks.plotSizes.block', 'plotSizes.block', 'amenities']);
+        $this->project->loadMissing(['blocks.media', 'amenities']);
 
         return view('livewire.admin.projects.show', [
             'project' => $this->project,
             'gallery' => $this->project->getMedia('gallery'),
-            'unassignedPlotSizes' => $this->project->plotSizes->whereNull('project_block_id'),
+            'videos' => $this->project->getMedia('videos'),
         ])->extends('admin.layouts.app')->section('content');
     }
 }

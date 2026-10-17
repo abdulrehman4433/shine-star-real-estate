@@ -11,7 +11,7 @@ class ProjectsController extends Controller
     public function index()
     {
         $projects = Project::query()
-            ->withCount(['blocks', 'plotSizes'])
+            ->withCount('blocks')
             ->active()
             ->orderBy('order')
             ->paginate(9);
@@ -27,7 +27,7 @@ class ProjectsController extends Controller
 
         abort_if(! $project->is_active && ! $canPreview, 404);
 
-        $project->load(['blocks.plotSizes', 'plotSizes.block', 'amenities', 'media']);
+        $project->load(['blocks.media', 'amenities', 'media']);
 
         $otherProjects = Project::query()
             ->where('id', '!=', $project->id)
@@ -38,7 +38,6 @@ class ProjectsController extends Controller
 
         return view('frontend.projects.show', [
             'project' => $project,
-            'unassignedPlotSizes' => $project->plotSizes->whereNull('project_block_id'),
             'otherProjects' => $otherProjects,
         ]);
     }

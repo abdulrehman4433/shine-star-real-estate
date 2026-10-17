@@ -125,18 +125,58 @@ class ProjectSeeder extends Seeder
                 'order' => $index,
             ]);
 
-            $blockIds = [];
-            foreach (array_slice($blockCatalog, 0, 2) as $blockIndex => $blockData) {
-                $block = $project->blocks()->create($blockData + ['order' => $blockIndex]);
-                $blockIds[] = $block->id;
+            $blockRows = array_slice($blockCatalog, 0, 2);
+
+            // Distribute size options across the blocks (same round-robin the old per-row table
+            // used); each size's demo figures become its own dynamic key/value payment rows —
+            // payment belongs to a size option now, not to the block as a whole.
+            $sizesByBlock = [];
+            foreach ($plotOptions as $plotIndex => $plotData) {
+                $sizesByBlock[$plotIndex % count($blockRows)][] = [
+                    'size_value' => $plotData['size_value'],
+                    'unit' => $plotData['unit'],
+                    'category' => $plotData['category'],
+                    'bedrooms' => $plotData['bedrooms'] ?? null,
+                    'bathrooms' => $plotData['bathrooms'] ?? null,
+                    'payment_options' => self::demoPaymentOptions($plotData),
+                ];
             }
 
-            foreach ($plotOptions as $plotIndex => $plotData) {
-                $project->plotSizes()->create($plotData + [
-                    'project_block_id' => $blockIds[$plotIndex % count($blockIds)],
-                    'order' => $plotIndex,
+            foreach ($blockRows as $blockIndex => $blockData) {
+                $project->blocks()->create($blockData + [
+                    'order' => $blockIndex,
+                    'plot_sizes' => array_values($sizesByBlock[$blockIndex] ?? []),
                 ]);
             }
         }
+    }
+
+    /** Turn a legacy demo plot row's figures into per-size key/value payment rows. */
+    private static function demoPaymentOptions(array $plot): array
+    {
+        $rows = [];
+
+        if (isset($plot['total_price'])) {
+            $rows[] = ['key' => 'Total Price', 'value' => number_format($plot['total_price'])];
+        }
+
+        if (isset($plot['booking_amount'])) {
+            $rows[] = ['key' => 'Booking', 'value' => number_format($plot['booking_amount'])];
+        }
+
+        if (isset($plot['confirmation_amount'])) {
+            $rows[] = ['key' => 'Confirmation', 'value' => number_format($plot['confirmation_amount'])];
+        }
+
+        if (isset($plot['installment_amount'])) {
+            $frequency = ucwords(str_replace('_', ' ', $plot['installment_frequency'] ?? 'monthly'));
+            $rows[] = ['key' => 'Installments', 'value' => number_format($plot['installment_amount']).' × '.($plot['installment_count'] ?? 36).' ('.$frequency.')'];
+        }
+
+        if (isset($plot['possession_amount'])) {
+            $rows[] = ['key' => 'Possession', 'value' => number_format($plot['possession_amount'])];
+        }
+
+        return $rows;
     }
 }

@@ -128,129 +128,232 @@
                         <i class="bi bi-plus-lg"></i> Add Block
                     </button>
                 </div>
-                <p class="form-text">If the society is divided into blocks or precincts (e.g. Block A, Precinct 5), list them here — you'll be able to assign each size option below to one of them.</p>
+                <p class="form-text">Each block (e.g. Block A, Block B) is its own entity: it has its own size options (each size with its own dynamic key/value payment rows), and its own media files (uploaded images/videos/PDFs plus video links — shared by all sizes in the block).</p>
 
                 @foreach ($blocks as $index => $block)
-                    <div class="row g-2 mb-2">
-                        <div class="col-md-4">
-                            <input type="text" placeholder="Block name (e.g. Block A)"
-                                wire:model="blocks.{{ $index }}.name" class="form-control @error('blocks.'.$index.'.name') is-invalid @enderror">
-                            @error('blocks.'.$index.'.name') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    <div class="border rounded-3 p-3 mb-3">
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-4">
+                                <input type="text" placeholder="Block name (e.g. Block A)"
+                                    wire:model="blocks.{{ $index }}.name" class="form-control @error('blocks.'.$index.'.name') is-invalid @enderror">
+                                @error('blocks.'.$index.'.name') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            </div>
+                            <div class="col-md-7">
+                                <input type="text" placeholder="Description (optional)"
+                                    wire:model="blocks.{{ $index }}.description" class="form-control">
+                            </div>
+                            <div class="col-md-1">
+                                <button type="button" class="btn btn-outline-danger w-100" wire:click="removeBlockRow({{ $index }})" title="Remove block">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
                         </div>
-                        <div class="col-md-7">
-                            <input type="text" placeholder="Description (optional)"
-                                wire:model="blocks.{{ $index }}.description" class="form-control">
+
+                        {{-- Size options (stored as JSON on this block) --}}
+                        <div class="mt-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <strong class="small text-muted text-uppercase">Size Options</strong>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" wire:click="addPlotSizeRow({{ $index }})">
+                                    <i class="bi bi-plus-lg"></i> Add Size
+                                </button>
+                            </div>
+
+                            @if (count($block['plot_sizes']))
+                                @foreach ($block['plot_sizes'] as $pIndex => $size)
+                                    <div class="border rounded p-2 mb-2">
+                                        <div class="row g-2 align-items-end">
+                                            <div class="col-md-2">
+                                                <label class="form-label small">Size</label>
+                                                <input type="number" step="0.01" placeholder="e.g. 5"
+                                                    wire:model="blocks.{{ $index }}.plot_sizes.{{ $pIndex }}.size_value"
+                                                    class="form-control @error('blocks.'.$index.'.plot_sizes.'.$pIndex.'.size_value') is-invalid @enderror">
+                                                @error('blocks.'.$index.'.plot_sizes.'.$pIndex.'.size_value') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label small">Unit</label>
+                                                <select wire:model="blocks.{{ $index }}.plot_sizes.{{ $pIndex }}.unit" class="form-select">
+                                                    @foreach ($units as $value => $label)
+                                                        <option value="{{ $value }}">{{ $label }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label small">Category (optional)</label>
+                                                <input type="text" placeholder="e.g. Residential Plot, Villa, Apartment"
+                                                    wire:model="blocks.{{ $index }}.plot_sizes.{{ $pIndex }}.category" class="form-control">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label small">Bedrooms</label>
+                                                <input type="number" wire:model="blocks.{{ $index }}.plot_sizes.{{ $pIndex }}.bedrooms"
+                                                    class="form-control @error('blocks.'.$index.'.plot_sizes.'.$pIndex.'.bedrooms') is-invalid @enderror">
+                                                @error('blocks.'.$index.'.plot_sizes.'.$pIndex.'.bedrooms') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label small">Bathrooms</label>
+                                                <input type="number" wire:model="blocks.{{ $index }}.plot_sizes.{{ $pIndex }}.bathrooms"
+                                                    class="form-control @error('blocks.'.$index.'.plot_sizes.'.$pIndex.'.bathrooms') is-invalid @enderror">
+                                                @error('blocks.'.$index.'.plot_sizes.'.$pIndex.'.bathrooms') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                            </div>
+                                            <div class="col-md-1">
+                                                <button type="button" class="btn btn-outline-danger w-100" wire:click="removePlotSizeRow({{ $index }}, {{ $pIndex }})" title="Remove size option">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {{-- This size's own payment options (one size option = one payment section) --}}
+                                        <div class="mt-2 pt-2 border-top">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <span class="small text-muted text-uppercase">Payment Options</span>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" wire:click="addSizePaymentRow({{ $index }}, {{ $pIndex }})">
+                                                    <i class="bi bi-plus-lg"></i> Add Option
+                                                </button>
+                                            </div>
+
+                                            @if (count($size['payment_options'] ?? []))
+                                                @foreach ($size['payment_options'] ?? [] as $oIndex => $option)
+                                                    <div class="row g-2 mb-2 align-items-end">
+                                                        <div class="col-md-5">
+                                                            <label class="form-label small">Key</label>
+                                                            <input type="text" placeholder="e.g. Total Payment"
+                                                                wire:model="blocks.{{ $index }}.plot_sizes.{{ $pIndex }}.payment_options.{{ $oIndex }}.key"
+                                                                class="form-control form-control-sm @error('blocks.'.$index.'.plot_sizes.'.$pIndex.'.payment_options.'.$oIndex.'.key') is-invalid @enderror">
+                                                            @error('blocks.'.$index.'.plot_sizes.'.$pIndex.'.payment_options.'.$oIndex.'.key') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label small">Value</label>
+                                                            <input type="text" placeholder="e.g. 300k"
+                                                                wire:model="blocks.{{ $index }}.plot_sizes.{{ $pIndex }}.payment_options.{{ $oIndex }}.value"
+                                                                class="form-control form-control-sm @error('blocks.'.$index.'.plot_sizes.'.$pIndex.'.payment_options.'.$oIndex.'.value') is-invalid @enderror">
+                                                            @error('blocks.'.$index.'.plot_sizes.'.$pIndex.'.payment_options.'.$oIndex.'.value') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                                        </div>
+                                                        <div class="col-md-1">
+                                                            <button type="button" class="btn btn-outline-danger w-100" wire:click="removeSizePaymentRow({{ $index }}, {{ $pIndex }}, {{ $oIndex }})" title="Remove option">
+                                                                <i class="bi bi-trash"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                @endforeach
+                                            @else
+                                                <div class="form-text mb-0">No payment options for this size yet — add your own key/value rows (e.g. Total Payment = 300k).</div>
+                                            @endif
+                                        </div>
+                                    </div>
+                                @endforeach
+                            @else
+                                <div class="form-text mb-1">No size options yet.</div>
+                            @endif
                         </div>
-                        <div class="col-md-1">
-                            <button type="button" class="btn btn-outline-danger w-100" wire:click="removeBlockRow({{ $index }})" title="Remove block">
-                                <i class="bi bi-trash"></i>
-                            </button>
+
+                        {{-- This block's own media: images, videos, PDFs --}}
+                        <div class="mt-3 pt-3 border-top">
+                            @php $mediaRow = $blockMedia->get($block['id'] ?? null) ?? []; @endphp
+                            <strong class="small text-muted text-uppercase d-block mb-2">Block Media</strong>
+
+                            <div class="mb-2">
+                                <label class="form-label small mb-1">Images</label>
+                                <input type="file" wire:model="blockImages.{{ $index }}" accept="image/*" multiple
+                                    class="form-control form-control-sm">
+                                <div wire:loading wire:target="blockImages.{{ $index }}" class="form-text">Uploading...</div>
+                                <div class="d-flex flex-wrap gap-2 mt-2">
+                                    @foreach ($blockImages[$index] ?? [] as $fIndex => $img)
+                                        <div class="position-relative">
+                                            <img src="{{ $img->temporaryUrl() }}" class="rounded" width="90" height="65" style="object-fit: cover;">
+                                            <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 p-0"
+                                                style="width: 18px; height: 18px; line-height: 1;"
+                                                wire:click="removePendingBlockFile({{ $index }}, {{ $fIndex }}, 'images')">&times;</button>
+                                        </div>
+                                        @error('blockImages.'.$index.'.'.$fIndex) <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                                    @endforeach
+                                    @foreach ($mediaRow['images'] ?? [] as $media)
+                                        <div class="position-relative">
+                                            <img src="{{ $media->getUrl() }}" class="rounded" width="90" height="65" style="object-fit: cover;">
+                                            <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 p-0"
+                                                style="width: 18px; height: 18px; line-height: 1;"
+                                                wire:click="removeBlockMedia({{ $block['id'] }}, {{ $media->id }})">&times;</button>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label small mb-1">Videos</label>
+                                <input type="file" wire:model="blockVideos.{{ $index }}" accept="video/*" multiple
+                                    class="form-control form-control-sm">
+                                <div wire:loading wire:target="blockVideos.{{ $index }}" class="form-text">Uploading...</div>
+                                <div class="d-flex flex-wrap gap-2 mt-2">
+                                    @foreach ($blockVideos[$index] ?? [] as $fIndex => $video)
+                                        <span class="badge text-bg-light border d-inline-flex align-items-center gap-1">
+                                            <i class="bi bi-film"></i> {{ $video->getClientOriginalName() }}
+                                            <button type="button" class="btn-close btn-close-sm" style="font-size: 0.6rem;"
+                                                wire:click="removePendingBlockFile({{ $index }}, {{ $fIndex }}, 'videos')" aria-label="Remove"></button>
+                                        </span>
+                                        @error('blockVideos.'.$index.'.'.$fIndex) <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                                    @endforeach
+                                    @foreach ($mediaRow['videos'] ?? [] as $media)
+                                        <div class="position-relative" style="width: 160px;">
+                                            <video src="{{ $media->getUrl() }}" controls preload="metadata"
+                                                class="rounded w-100" style="height: 95px; object-fit: cover; background: #000;"></video>
+                                            <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 p-0"
+                                                style="width: 18px; height: 18px; line-height: 1;"
+                                                wire:click="removeBlockMedia({{ $block['id'] }}, {{ $media->id }})">&times;</button>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label small mb-1">Video Links (YouTube/Vimeo)</label>
+                                @foreach ($blockVideoUrls[$index] ?? [''] as $uIndex => $link)
+                                    <div class="input-group input-group-sm mb-1">
+                                        <input type="text" placeholder="e.g. https://www.youtube.com/watch?v=..."
+                                            wire:model="blockVideoUrls.{{ $index }}.{{ $uIndex }}"
+                                            class="form-control @error('blockVideoUrls.'.$index.'.'.$uIndex) is-invalid @enderror">
+                                        <button type="button" class="btn btn-outline-danger"
+                                            wire:click="removeBlockVideoUrlRow({{ $index }}, {{ $uIndex }})" title="Remove this link">&times;</button>
+                                    </div>
+                                    @error('blockVideoUrls.'.$index.'.'.$uIndex)
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
+                                @endforeach
+                                <button type="button" class="btn btn-sm btn-outline-primary" wire:click="addBlockVideoUrlRow({{ $index }})">
+                                    <i class="bi bi-plus-lg"></i> Add Video Link
+                                </button>
+                                <div class="form-text">Uploaded video files and video links both appear in this block's Videos tab on the frontend.</div>
+                            </div>
+
+                            <div class="mb-0">
+                                <label class="form-label small mb-1">PDFs</label>
+                                <input type="file" wire:model="blockPdfs.{{ $index }}" accept="application/pdf" multiple
+                                    class="form-control form-control-sm">
+                                <div wire:loading wire:target="blockPdfs.{{ $index }}" class="form-text">Uploading...</div>
+                                <div class="d-flex flex-wrap gap-2 mt-2">
+                                    @foreach ($blockPdfs[$index] ?? [] as $fIndex => $pdf)
+                                        <span class="badge text-bg-light border d-inline-flex align-items-center gap-1">
+                                            <i class="bi bi-file-earmark-pdf"></i> {{ $pdf->getClientOriginalName() }}
+                                            <button type="button" class="btn-close btn-close-sm" style="font-size: 0.6rem;"
+                                                wire:click="removePendingBlockFile({{ $index }}, {{ $fIndex }}, 'pdfs')" aria-label="Remove"></button>
+                                        </span>
+                                        @error('blockPdfs.'.$index.'.'.$fIndex) <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                                    @endforeach
+                                    @foreach ($mediaRow['pdfs'] ?? [] as $media)
+                                        <span class="badge text-bg-light border d-inline-flex align-items-center gap-1">
+                                            <a href="{{ $media->getUrl() }}" target="_blank" class="text-decoration-none">
+                                                <i class="bi bi-file-earmark-pdf"></i> {{ $media->file_name }}
+                                            </a>
+                                            <button type="button" class="btn-close btn-close-sm" style="font-size: 0.6rem;"
+                                                wire:click="removeBlockMedia({{ $block['id'] }}, {{ $media->id }})" aria-label="Remove"></button>
+                                        </span>
+                                    @endforeach
+                                </div>
+                            </div>
                         </div>
                     </div>
                 @endforeach
             </div>
         </div>
 
-        <div class="card mb-4">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center ssm-form-section-title">
-                    <h2 class="h6 mb-0 d-flex align-items-center gap-2"><i class="bi bi-rulers"></i> Payment Plans</h2>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" wire:click="addPlotSizeRow">
-                        <i class="bi bi-plus-lg"></i> Add Size Option
-                    </button>
-                </div>
-                <p class="form-text">Add each plot/area size offered (e.g. 5 Marla, 10 Marla, 1 Kanal), the block it belongs to, and its payment plan.</p>
 
-                @foreach ($plotSizes as $index => $row)
-                    <div class="border rounded-3 p-3 mb-3 bg-light-subtle">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <strong class="text-muted small">Size Option {{ $index + 1 }}</strong>
-                            <button type="button" class="btn btn-sm btn-outline-danger" wire:click="removePlotSizeRow({{ $index }})">
-                                <i class="bi bi-trash"></i> Remove
-                            </button>
-                        </div>
-
-                        <div class="row g-2">
-                            <div class="col-md-2">
-                                <label class="form-label small">Size</label>
-                                <input type="number" step="0.01" placeholder="e.g. 5"
-                                    wire:model="plotSizes.{{ $index }}.size_value" class="form-control @error('plotSizes.'.$index.'.size_value') is-invalid @enderror">
-                                @error('plotSizes.'.$index.'.size_value') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label small">Unit</label>
-                                <select wire:model="plotSizes.{{ $index }}.unit" class="form-select">
-                                    @foreach ($units as $value => $label)
-                                        <option value="{{ $value }}">{{ $label }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label small">Block</label>
-                                <select wire:model="plotSizes.{{ $index }}.block_index" class="form-select">
-                                    <option value="">No specific block</option>
-                                    @foreach ($blocks as $bIndex => $block)
-                                        <option value="{{ $bIndex }}">{{ $block['name'] !== '' ? $block['name'] : 'Block '.($bIndex + 1).' (unnamed)' }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-md-5">
-                                <label class="form-label small">Category (optional)</label>
-                                <input type="text" placeholder="e.g. Residential Plot, Villa, Apartment, Commercial Shop"
-                                    wire:model="plotSizes.{{ $index }}.category" class="form-control">
-                            </div>
-                        </div>
-
-                        <hr class="my-3">
-                        <div class="small text-muted mb-2">Payment Plan</div>
-
-                        <div class="row g-2">
-                            <div class="col-md-3">
-                                <label class="form-label small">Total Price</label>
-                                <input type="number" step="0.01" wire:model="plotSizes.{{ $index }}.total_price" class="form-control @error('plotSizes.'.$index.'.total_price') is-invalid @enderror">
-                                @error('plotSizes.'.$index.'.total_price') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label small">Booking Amount</label>
-                                <input type="number" step="0.01" wire:model="plotSizes.{{ $index }}.booking_amount" class="form-control">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label small">Confirmation Amount</label>
-                                <input type="number" step="0.01" wire:model="plotSizes.{{ $index }}.confirmation_amount" class="form-control">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label small">Possession Amount</label>
-                                <input type="number" step="0.01" wire:model="plotSizes.{{ $index }}.possession_amount" class="form-control">
-                            </div>
-                        </div>
-
-                        <div class="row g-2 mt-2">
-                            <div class="col-md-3">
-                                <label class="form-label small">Installment Amount</label>
-                                <input type="number" step="0.01" wire:model="plotSizes.{{ $index }}.installment_amount" class="form-control">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label small">No. of Installments</label>
-                                <input type="number" wire:model="plotSizes.{{ $index }}.installment_count" class="form-control">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label small">Installment Frequency</label>
-                                <select wire:model="plotSizes.{{ $index }}.installment_frequency" class="form-select">
-                                    <option value="">—</option>
-                                    @foreach ($installmentFrequencies as $value => $label)
-                                        <option value="{{ $value }}">{{ $label }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label small">Notes (optional)</label>
-                                <input type="text" placeholder="Special terms" wire:model="plotSizes.{{ $index }}.notes" class="form-control">
-                            </div>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-        </div>
 
         @if ($amenities->isNotEmpty())
             <div class="card mb-4">
@@ -325,6 +428,58 @@
 
         <div class="card mb-4">
             <div class="card-body">
+                <h2 class="h6 ssm-form-section-title"><i class="bi bi-camera-video"></i> Videos</h2>
+
+                <div class="mb-3">
+                    <label class="form-label">Video Links (optional)</label>
+
+                    @foreach ($videoLinks as $index => $link)
+                        <div class="input-group mb-2">
+                            <input type="text" placeholder="e.g. https://www.youtube.com/watch?v=..."
+                                wire:model="videoLinks.{{ $index }}"
+                                class="form-control @error('videoLinks.'.$index) is-invalid @enderror">
+                            <button type="button" class="btn btn-outline-danger"
+                                wire:click="removeVideoLinkRow({{ $index }})" title="Remove this link">&times;</button>
+                        </div>
+                        @error('videoLinks.'.$index)
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
+                    @endforeach
+
+                    <button type="button" class="btn btn-sm btn-outline-primary" wire:click="addVideoLinkRow">
+                        <i class="bi bi-plus-lg"></i> Add another video link
+                    </button>
+                    <div class="form-text mt-1">A YouTube or Vimeo link — embedded on the project's detail page. Use the button above to attach more than one.</div>
+                </div>
+
+                <div class="mb-0">
+                    <label class="form-label">Upload Videos (optional)</label>
+                    <input type="file" wire:model="videoFiles" accept="video/*" multiple
+                        class="form-control @error('videoFiles.*') is-invalid @enderror">
+                    @error('videoFiles.*') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    <div wire:loading wire:target="videoFiles" class="form-text">Uploading...</div>
+                    <div class="form-text">MP4, WebM, OGG, MOV or AVI — up to 50 MB per file (server PHP upload limits apply). Uploaded videos play directly on the detail page.</div>
+
+                    @if ($existingVideos->isNotEmpty())
+                        <div class="d-flex flex-wrap gap-2 mt-2">
+                            @foreach ($existingVideos as $media)
+                                <div class="position-relative" style="width: 180px;">
+                                    <video src="{{ $media->getUrl() }}" controls preload="metadata"
+                                        class="rounded w-100" style="height: 110px; object-fit: cover; background: #000;"></video>
+                                    <button type="button"
+                                        class="btn btn-sm btn-danger position-absolute top-0 end-0 p-0"
+                                        style="width: 20px; height: 20px; line-height: 1;"
+                                        wire:click="removeExistingVideo({{ $media->id }})">&times;</button>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
                 <h2 class="h6 ssm-form-section-title"><i class="bi bi-telephone"></i> Contact</h2>
 
                 <div class="row">
@@ -337,15 +492,6 @@
                         <label class="form-label">Contact Email (optional)</label>
                         <input type="text" wire:model="contactEmail" class="form-control @error('contactEmail') is-invalid @enderror">
                         @error('contactEmail') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-12 mb-3">
-                        <label class="form-label">Video URL (optional)</label>
-                        <input type="text" placeholder="e.g. https://www.youtube.com/watch?v=..."
-                            wire:model="videoUrl" class="form-control @error('videoUrl') is-invalid @enderror">
-                        @error('videoUrl') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                        <div class="form-text">A YouTube or Vimeo link — shown as an embedded video on the project's detail page.</div>
                     </div>
                 </div>
             </div>

@@ -66,104 +66,100 @@
 
     <div class="card mb-4">
         <div class="card-body">
-            <h2 class="h6">Blocks &amp; Size Options</h2>
+            <h2 class="h6">Blocks, Payment &amp; Media</h2>
 
-            @if ($project->blocks->isEmpty() && $project->plotSizes->isEmpty())
-                <p class="text-muted small mb-0">No blocks or size options added yet.</p>
+            @if ($project->blocks->isEmpty())
+                <p class="text-muted small mb-0">No blocks added yet.</p>
             @else
                 @foreach ($project->blocks as $block)
-                    <div class="mb-3">
+                    <div class="mb-4 pb-3 {{ $loop->last ? '' : 'border-bottom' }}">
                         <h3 class="h6 mb-1">{{ $block->name }}</h3>
                         @if ($block->description)
                             <p class="text-muted small mb-2">{{ $block->description }}</p>
                         @endif
 
-                        @if ($block->plotSizes->isEmpty())
-                            <p class="text-muted small">No size options assigned to this block.</p>
-                        @else
-                            <div class="table-responsive">
+                        {{-- Size options (JSON), each carrying its own payment rows --}}
+                        @if ($block->plot_sizes)
+                            <div class="small text-muted text-uppercase mb-1">Size Options</div>
+                            <div class="table-responsive mb-3">
                                 <table class="table table-sm">
                                     <thead>
                                         <tr>
                                             <th>Size</th>
                                             <th>Category</th>
-                                            <th>Booking</th>
-                                            <th>Confirmation</th>
-                                            <th>Installments</th>
-                                            <th>Possession</th>
-                                            <th>Notes</th>
-                                            <th>Total Amount</th>
+                                            <th>Bedrooms</th>
+                                            <th>Bathrooms</th>
+                                            <th>Payment Options</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach ($block->plotSizes as $plotSize)
+                                        @foreach ($block->plot_sizes as $row)
+                                            @php $options = \App\Models\ProjectBlock::paymentOptionsFor($row); @endphp
                                             <tr>
-                                                <td>{{ $plotSize->label }}</td>
-                                                <td>{{ $plotSize->category ?: '—' }}</td>
-                                                <td>{{ $plotSize->booking_amount ? number_format((float) $plotSize->booking_amount) : '—' }}</td>
-                                                <td>{{ $plotSize->confirmation_amount ? number_format((float) $plotSize->confirmation_amount) : '—' }}</td>
+                                                <td>{{ \App\Models\ProjectBlock::sizeLabel($row) }}</td>
+                                                <td>{{ ($row['category'] ?? '') ?: '—' }}</td>
+                                                <td>{{ $row['bedrooms'] ?? '—' }}</td>
+                                                <td>{{ $row['bathrooms'] ?? '—' }}</td>
                                                 <td>
-                                                    @if ($plotSize->installment_amount)
-                                                        {{ number_format((float) $plotSize->installment_amount) }} x {{ $plotSize->installment_count }}
-                                                        ({{ \App\Models\ProjectPlotSize::INSTALLMENT_FREQUENCIES[$plotSize->installment_frequency] ?? '—' }})
-                                                    @else
-                                                        —
-                                                    @endif
+                                                    @forelse ($options as $option)
+                                                        <div class="small"><span class="text-muted">{{ ($option['key'] ?: '—').' :' }}</span> <strong>{{ $option['value'] ?: '—' }}</strong></div>
+                                                    @empty
+                                                        <span class="text-muted">—</span>
+                                                    @endforelse
                                                 </td>
-                                                <td>{{ $plotSize->possession_amount ? number_format((float) $plotSize->possession_amount) : '—' }}</td>
-                                                <td>{{ $plotSize->notes ?: '—' }}</td>
-                                                <td>{{ $plotSize->total_price ? number_format((float) $plotSize->total_price) : '—' }}</td>
                                             </tr>
                                         @endforeach
                                     </tbody>
                                 </table>
                             </div>
                         @endif
+
+                        @if (! $block->plot_sizes)
+                            <p class="text-muted small">No size options yet.</p>
+                        @endif
+
+                        {{-- This block's own media (images / videos+links / PDFs) --}}
+                        @php
+                            $blockImages = $block->getMedia('block_images');
+                            $blockVideos = $block->getMedia('block_videos');
+                            $blockPdfs = $block->getMedia('block_pdfs');
+                            $blockVideoEmbeds = $block->video_embed_urls;
+                        @endphp
+                        @if ($blockImages->isNotEmpty() || $blockVideos->isNotEmpty() || $blockPdfs->isNotEmpty() || $blockVideoEmbeds !== [])
+                            <div class="small text-muted text-uppercase mb-1">Media</div>
+                            <div class="d-flex flex-wrap gap-2 mb-2">
+                                @foreach ($blockImages as $media)
+                                    <a href="{{ $media->getUrl() }}" target="_blank">
+                                        <img src="{{ $media->getUrl() }}" class="rounded" width="110" height="75" style="object-fit: cover;">
+                                    </a>
+                                @endforeach
+                                @foreach ($blockPdfs as $media)
+                                    <a href="{{ $media->getUrl() }}" target="_blank" class="badge text-bg-light border text-decoration-none align-self-center">
+                                        <i class="bi bi-file-earmark-pdf"></i> {{ $media->file_name }}
+                                    </a>
+                                @endforeach
+                            </div>
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach ($blockVideos as $media)
+                                    <video src="{{ $media->getUrl() }}" controls preload="metadata" class="rounded" width="180" style="background: #000;"></video>
+                                @endforeach
+                            </div>
+                            @if ($blockVideoEmbeds !== [])
+                                <div class="row g-2 mt-1">
+                                    @foreach ($blockVideoEmbeds as $embedUrl)
+                                        <div class="col-md-6">
+                                            <div class="ratio ratio-16x9">
+                                                <iframe src="{{ $embedUrl }}" title="{{ $block->name }} video" allowfullscreen loading="lazy"></iframe>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                        @else
+                            <p class="text-muted small mb-0">No media uploaded for this block.</p>
+                        @endif
                     </div>
                 @endforeach
-
-                @if ($unassignedPlotSizes->isNotEmpty())
-                    <div class="mb-3">
-                        <h3 class="h6 mb-1">No Specific Block</h3>
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>Size</th>
-                                        <th>Category</th>
-                                        <th>Booking</th>
-                                        <th>Confirmation</th>
-                                        <th>Installments</th>
-                                        <th>Possession</th>
-                                        <th>Notes</th>
-                                        <th>Total Amount</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($unassignedPlotSizes as $plotSize)
-                                        <tr>
-                                            <td>{{ $plotSize->label }}</td>
-                                            <td>{{ $plotSize->category ?: '—' }}</td>
-                                            <td>{{ $plotSize->booking_amount ? number_format((float) $plotSize->booking_amount) : '—' }}</td>
-                                            <td>{{ $plotSize->confirmation_amount ? number_format((float) $plotSize->confirmation_amount) : '—' }}</td>
-                                            <td>
-                                                @if ($plotSize->installment_amount)
-                                                    {{ number_format((float) $plotSize->installment_amount) }} x {{ $plotSize->installment_count }}
-                                                    ({{ \App\Models\ProjectPlotSize::INSTALLMENT_FREQUENCIES[$plotSize->installment_frequency] ?? '—' }})
-                                                @else
-                                                    —
-                                                @endif
-                                            </td>
-                                            <td>{{ $plotSize->possession_amount ? number_format((float) $plotSize->possession_amount) : '—' }}</td>
-                                            <td>{{ $plotSize->notes ?: '—' }}</td>
-                                            <td>{{ $plotSize->total_price ? number_format((float) $plotSize->total_price) : '—' }}</td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                @endif
             @endif
         </div>
     </div>
@@ -197,6 +193,27 @@
             </div>
             @if ($project->brochure_url)
                 <a href="{{ $project->brochure_url }}" target="_blank">View Brochure (PDF)</a>
+            @endif
+
+            @if ($project->video_embed_urls || $videos->isNotEmpty())
+                <div class="mt-3">
+                    <span class="text-muted small d-block mb-2">Videos</span>
+                    <div class="row g-2">
+                        @foreach ($project->video_embed_urls as $embedUrl)
+                            <div class="col-md-6">
+                                <div class="ratio ratio-16x9">
+                                    <iframe src="{{ $embedUrl }}" title="Project video" allowfullscreen loading="lazy"></iframe>
+                                </div>
+                            </div>
+                        @endforeach
+                        @foreach ($videos as $media)
+                            <div class="col-md-6">
+                                <video src="{{ $media->getUrl() }}" controls preload="metadata"
+                                    class="w-100 rounded" style="background: #000;"></video>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
             @endif
         </div>
     </div>

@@ -39,25 +39,58 @@ class RealProjectSeeder extends Seeder
         $this->seedEsmrHeightsFaisalHills();
     }
 
-    /** Delete-and-recreate blocks + their plot sizes, same pattern Admin\Projects\Form uses on save. */
+    /** Delete-and-recreate blocks with their JSON plot sizes (block ids don't need to survive
+     *  here — seeded blocks carry no media). Each plot's demo price figures become that size
+     *  option's own dynamic key/value payment rows (payment is per-size, not per-block). */
     private function replaceBlocks(Project $project, array $blocks): void
     {
-        $project->blocks()->delete();
-        $project->plotSizes()->delete();
+        $project->blocks()->get()->each->delete();
 
         foreach ($blocks as $blockIndex => $blockData) {
             $plots = $blockData['plots'] ?? [];
             unset($blockData['plots']);
 
-            $block = $project->blocks()->create($blockData + ['order' => $blockIndex]);
-
-            foreach ($plots as $plotIndex => $plot) {
-                $project->plotSizes()->create($plot + [
-                    'project_block_id' => $block->id,
-                    'order' => $plotIndex,
-                ]);
-            }
+            $project->blocks()->create($blockData + [
+                'order' => $blockIndex,
+                'plot_sizes' => collect($plots)->map(fn ($plot) => [
+                    'size_value' => (float) ($plot['size_value'] ?? 0),
+                    'unit' => $plot['unit'] ?? 'marla',
+                    'category' => $plot['category'] ?? null,
+                    'bedrooms' => isset($plot['bedrooms']) ? (int) $plot['bedrooms'] : null,
+                    'bathrooms' => isset($plot['bathrooms']) ? (int) $plot['bathrooms'] : null,
+                    'payment_options' => self::demoPaymentOptions($plot),
+                ])->values()->all(),
+            ]);
         }
+    }
+
+    /** Turn a legacy demo plot row's figures into per-size key/value payment rows. */
+    private static function demoPaymentOptions(array $plot): array
+    {
+        $rows = [];
+
+        if (isset($plot['total_price'])) {
+            $rows[] = ['key' => 'Total Price', 'value' => number_format($plot['total_price'])];
+        }
+
+        if (isset($plot['booking_amount'])) {
+            $rows[] = ['key' => 'Booking', 'value' => number_format($plot['booking_amount'])];
+        }
+
+        if (isset($plot['confirmation_amount'])) {
+            $rows[] = ['key' => 'Confirmation', 'value' => number_format($plot['confirmation_amount'])];
+        }
+
+        if (isset($plot['installment_amount'])) {
+            $frequency = ucwords(str_replace('_', ' ', $plot['installment_frequency'] ?? 'monthly'));
+            $rows[] = ['key' => 'Installments', 'value' => number_format($plot['installment_amount']).' × '.($plot['installment_count'] ?? 36).' ('.$frequency.')'];
+        }
+
+        if (isset($plot['possession_amount'])) {
+            $rows[] = ['key' => 'Possession', 'value' => number_format($plot['possession_amount'])];
+        }
+
+        return $rows;
     }
 
     private function seedBlueWorldCity(): void

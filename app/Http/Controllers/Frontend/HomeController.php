@@ -92,7 +92,7 @@ class HomeController extends Controller
         }
 
         $projects = Project::query()
-            ->withCount(['blocks', 'plotSizes'])
+            ->withCount('blocks')
             ->active()
             ->featured()
             ->orderBy('order')

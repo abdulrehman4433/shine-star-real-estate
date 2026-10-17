@@ -100,6 +100,50 @@
     .pd-block-card{width:100%;border:1px solid #eef1f6;border-radius:10px;overflow:hidden;margin-bottom:20px;box-shadow:0 2px 10px rgba(15,40,90,.04);}
     .pd-block-card:last-child{margin-bottom:0;}
     .pd-block-card-head{padding:14px 20px;background:#f8fafc;border-bottom:1px solid #eef1f6;}
+    .pd-block-card-body{padding:16px 20px;}
+    @media (max-width:575px){ .pd-block-card-body{padding:14px;} }
+
+    /* Per-block media gallery tabs (100×100 thumbnails) */
+    .pd-media-grid{display:flex;flex-wrap:wrap;gap:10px;}
+    .pd-media-tile{
+        position:relative;width:100px;height:100px;padding:0;margin:0;
+        border:1px solid #e3e8f0;border-radius:8px;overflow:hidden;background:#f4f7fc;
+        cursor:pointer;display:flex;align-items:center;justify-content:center;
+        color:var(--pd-muted);text-decoration:none;flex-shrink:0;
+    }
+    .pd-media-tile:hover{border-color:var(--pd-blue);}
+    .pd-media-tile img,.pd-media-tile video{width:100px;height:100px;object-fit:cover;display:block;pointer-events:none;}
+    .pd-media-tile .bi-play-btn-fill{font-size:1.9rem;color:var(--pd-blue);}
+    .pd-media-play{
+        position:absolute;left:0;right:0;bottom:0;height:26px;
+        display:flex;align-items:center;justify-content:center;
+        background:rgba(11,37,69,.65);color:#fff;font-size:.9rem;
+    }
+    .pd-media-pdf{flex-direction:column;gap:4px;padding:6px;text-align:center;}
+    .pd-media-pdf i{font-size:1.5rem;color:#d64545;}
+    .pd-media-pdf span{font-size:.6rem;line-height:1.15;color:var(--pd-muted);word-break:break-all;}
+    .pd-media-tabs .nav-link{font-size:.85rem;font-weight:600;color:var(--pd-navy);}
+    .pd-media-tabs .nav-link.active{color:var(--pd-blue);}
+
+    /* Modern payment-plan table (rows = sizes, one column per term) */
+    .pd-table-frame{border:1px solid #eef1f6;border-radius:10px;overflow:hidden;background:#fff;}
+    .pd-payment-table{margin-bottom:0;}
+    .pd-payment-table thead th{
+        background:#f1f5f9;color:var(--pd-navy);font-weight:600;font-size:.78rem;
+        letter-spacing:.02em;text-transform:uppercase;white-space:nowrap;
+        padding:10px 14px;border-bottom:1px solid #e3e8f0;
+    }
+    .pd-payment-table thead th:not(:first-child):not(:nth-child(2)){text-align:right;}
+    .pd-payment-table tbody td{padding:9px 14px;border-color:#eef1f6;vertical-align:middle;white-space:nowrap;}
+    .pd-payment-table td:not(:first-child):not(:nth-child(2)){text-align:right;}
+    .pd-payment-table tbody tr:last-child td{border-bottom:none;}
+    .pd-payment-table tbody tr:hover{background:#f8fafc;}
+    .pd-payment-table td:first-child{font-weight:600;color:var(--pd-navy);}
+    .pd-payment-table thead th.pd-payment-total{color:var(--pd-blue);}
+    .pd-payment-table tbody td.pd-payment-total{color:var(--pd-blue);font-weight:700;}
+
+    /* Videos accordion: capped height with its own scroll */
+    .pd-video-scroll{max-height:500px;overflow-y:auto;}
     .pd-map{width:100%;height:320px;border-radius:10px;}
 
     /* Sidebar */
@@ -143,7 +187,6 @@
             ->merge($project->getMedia('gallery')->map->getUrl())
             ->filter()
             ->values();
-        $currencySymbol = \App\Models\Setting::currencySymbol();
     @endphp
 
     <div class="pd-gallery" x-data="{ images: @js($galleryImages), index: 0 }">
@@ -225,7 +268,7 @@
                                     </div>
                                     <div class="col-md-6">
                                         <div class="pd-feat-row"><span>Blocks</span><span>{{ $project->blocks->count() }}</span></div>
-                                        <div class="pd-feat-row"><span>Size Options</span><span>{{ $project->plotSizes->count() }}</span></div>
+                                        <div class="pd-feat-row"><span>Size Options</span><span>{{ $project->blocks->sum(fn ($b) => count($b->plot_sizes ?? [])) }}</span></div>
                                     </div>
                                 </div>
                             </div>
@@ -278,18 +321,27 @@
                             </div>
                         @endif
 
-                        @if ($project->video_embed_url)
+                        @if ($project->video_embed_urls || $project->getMedia('videos')->isNotEmpty())
                             <div class="accordion-item">
                                 <h2 class="accordion-header">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#pdVideo">
-                                        Video
+                                    {{-- Open by default: this section only renders when the project has at least one video. --}}
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#pdVideo">
+                                        Videos
                                     </button>
                                 </h2>
-                                <div id="pdVideo" class="accordion-collapse collapse" data-bs-parent="#projectAccordion">
-                                    <div class="accordion-body">
-                                        <div class="ratio ratio-16x9">
-                                            <iframe src="{{ $project->video_embed_url }}" title="{{ $project->title }} video" allowfullscreen loading="lazy"></iframe>
-                                        </div>
+                                <div id="pdVideo" class="accordion-collapse collapse show" data-bs-parent="#projectAccordion">
+                                    <div class="accordion-body pd-video-scroll">
+                                        @foreach ($project->video_embed_urls as $embedUrl)
+                                            <div class="ratio ratio-16x9 mb-3">
+                                                <iframe src="{{ $embedUrl }}" title="{{ $project->title }} video" allowfullscreen loading="lazy"></iframe>
+                                            </div>
+                                        @endforeach
+                                        @foreach ($project->getMedia('videos') as $media)
+                                            <video controls preload="metadata" class="w-100 mb-3 rounded" style="background: #000;">
+                                                <source src="{{ $media->getUrl() }}">
+                                                Your browser does not support the video tag.
+                                            </video>
+                                        @endforeach
                                     </div>
                                 </div>
                             </div>
@@ -376,96 +428,172 @@
             </div>
         </div>
 
-        @if ($project->blocks->isNotEmpty() || $project->plotSizes->isNotEmpty())
+        @if ($project->blocks->isNotEmpty())
             <div class="pd-panel">
                 <div class="pd-panel-head">
-                    <h2 class="h6 mb-0">Payment Plans</h2>
+                    <h2 class="h6 mb-0">Payment Plans &amp; Media</h2>
                 </div>
                 <div class="pd-panel-body">
                     @foreach ($project->blocks as $block)
-                        @if ($block->plotSizes->isNotEmpty())
-                            <div class="pd-block-card">
+                        @php
+                            $hasSizes = (bool) $block->plot_sizes;
+                            $blockImages = $block->getMedia('block_images');
+                            $blockVideos = $block->getMedia('block_videos');
+                            $blockPdfs = $block->getMedia('block_pdfs');
+                            $videoLinkEmbeds = $block->video_embed_urls;
+                            $hasMedia = $blockImages->isNotEmpty() || $blockVideos->isNotEmpty() || $blockPdfs->isNotEmpty() || $videoLinkEmbeds !== [];
+                            $paneBase = 'block'.$block->id;
+                        @endphp
+                        @if ($hasSizes || $hasMedia)
+                            <div class="pd-block-card" x-data="{ full: '', video: '', embed: '' }">
                                 <div class="pd-block-card-head">
                                     <h3 class="h6 mb-0">{{ $block->name }}</h3>
                                     @if ($block->description)
                                         <p class="text-muted small mb-0 mt-1">{{ $block->description }}</p>
                                     @endif
                                 </div>
-                                <div class="table-responsive">
-                                    <table class="table table-sm pd-plan-table mb-0">
-                                        <thead>
-                                            <tr>
-                                                <th>Size</th>
-                                                <th>Category</th>
-                                                <th>Booking</th>
-                                                <th>Installments</th>
-                                                <th>Possession</th>
-                                                <th>Total Amount</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach ($block->plotSizes as $plotSize)
-                                                <tr>
-                                                    <td>{{ $plotSize->label }}</td>
-                                                    <td>{{ $plotSize->category ?: '—' }}</td>
-                                                    <td>{{ $plotSize->booking_amount ? $currencySymbol.number_format((float) $plotSize->booking_amount) : '—' }}</td>
-                                                    <td>
-                                                        @if ($plotSize->installment_amount)
-                                                            {{ $currencySymbol.number_format((float) $plotSize->installment_amount) }} &times; {{ $plotSize->installment_count }}
-                                                        @else
-                                                            —
-                                                        @endif
-                                                    </td>
-                                                    <td>{{ $plotSize->possession_amount ? $currencySymbol.number_format((float) $plotSize->possession_amount) : '—' }}</td>
-                                                    <td>{{ $plotSize->total_price ? $currencySymbol.number_format((float) $plotSize->total_price) : '—' }}</td>
-                                                </tr>
-                                            @endforeach
-                                        </tbody>
-                                    </table>
+
+                                <div class="pd-block-card-body">
+                                    {{-- Payment plan: rows = sizes (+ category), one column per term (margin first … total price last) --}}
+                                    @php $paymentKeys = \App\Models\ProjectBlock::paymentColumnsFor($block->plot_sizes); @endphp
+                                    @if ($hasSizes && $paymentKeys !== [])
+                                        <div class="small text-muted text-uppercase mb-1">Payment Plans</div>
+                                        <div class="pd-table-frame mb-3">
+                                            <div class="table-responsive">
+                                                <table class="table table-sm pd-plan-table pd-payment-table mb-0">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Size</th>
+                                                            <th>Category</th>
+                                                            @foreach ($paymentKeys as $key)
+                                                                <th class="{{ str_contains(strtolower($key), 'total') ? 'pd-payment-total' : '' }}">{{ $key }}</th>
+                                                            @endforeach
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach ($block->plot_sizes as $row)
+                                                            @php
+                                                                $values = collect(\App\Models\ProjectBlock::paymentOptionsFor($row))
+                                                                    ->mapWithKeys(fn ($option) => [$option['key'] => $option['value']]);
+                                                            @endphp
+                                                            <tr>
+                                                                <td>{{ \App\Models\ProjectBlock::sizeLabel($row) }}</td>
+                                                                <td>{{ ($row['category'] ?? '') ?: '—' }}</td>
+                                                                @foreach ($paymentKeys as $key)
+                                                                    <td class="{{ str_contains(strtolower($key), 'total') ? 'pd-payment-total' : '' }}">
+                                                                        @if (($values[$key] ?? '') !== ''){{ $values[$key] }}@else<span class="text-muted">—</span>@endif
+                                                                    </td>
+                                                                @endforeach
+                                                            </tr>
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    @endif
+
+                                    {{-- Media gallery: one tab per available type (shared by all sizes in this block) --}}
+                                    @if ($hasMedia)
+                                        <div class="small text-muted text-uppercase mb-1">Media</div>
+                                        <ul class="nav nav-tabs pd-media-tabs mb-2" role="tablist">
+                                            @if ($blockImages->isNotEmpty())
+                                                <li class="nav-item" role="presentation">
+                                                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#{{ $paneBase }}-images" type="button" role="tab">
+                                                        <i class="bi bi-images me-1"></i>Images <span class="badge text-bg-light">{{ $blockImages->count() }}</span>
+                                                    </button>
+                                                </li>
+                                            @endif
+                                            @if ($blockVideos->isNotEmpty() || $videoLinkEmbeds !== [])
+                                                <li class="nav-item" role="presentation">
+                                                    <button class="nav-link {{ $blockImages->isNotEmpty() ? '' : 'active' }}" data-bs-toggle="tab" data-bs-target="#{{ $paneBase }}-videos" type="button" role="tab">
+                                                        <i class="bi bi-camera-video me-1"></i>Videos <span class="badge text-bg-light">{{ $blockVideos->count() + count($videoLinkEmbeds) }}</span>
+                                                    </button>
+                                                </li>
+                                            @endif
+                                            @if ($blockPdfs->isNotEmpty())
+                                                <li class="nav-item" role="presentation">
+                                                    <button class="nav-link {{ $blockImages->isNotEmpty() || $blockVideos->isNotEmpty() || $videoLinkEmbeds !== [] ? '' : 'active' }}" data-bs-toggle="tab" data-bs-target="#{{ $paneBase }}-pdfs" type="button" role="tab">
+                                                        <i class="bi bi-map me-1"></i>Socity Map <span class="badge text-bg-light">{{ $blockPdfs->count() }}</span>
+                                                    </button>
+                                                </li>
+                                            @endif
+                                        </ul>
+
+                                        <div class="tab-content">
+                                            @if ($blockImages->isNotEmpty())
+                                                <div class="tab-pane fade show active" id="{{ $paneBase }}-images" role="tabpanel">
+                                                    <div class="pd-media-grid">
+                                                        @foreach ($blockImages as $media)
+                                                            <button type="button" class="pd-media-tile" title="{{ $media->file_name }}"
+                                                                data-bs-toggle="modal" data-bs-target="#{{ $paneBase }}-modal"
+                                                                @click="full = @js($media->getUrl()); video = ''; embed = '';">
+                                                                <img src="{{ $media->hasGeneratedConversion('thumb') ? $media->getUrl('thumb') : $media->getUrl() }}"
+                                                                    width="100" height="100" loading="lazy" alt="{{ $block->name }} image {{ $loop->iteration }}">
+                                                            </button>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+                                            @endif
+
+                                            @if ($blockVideos->isNotEmpty() || $videoLinkEmbeds !== [])
+                                                <div class="tab-pane fade {{ $blockImages->isNotEmpty() ? '' : 'show active' }}" id="{{ $paneBase }}-videos" role="tabpanel">
+                                                    <div class="pd-media-grid">
+                                                        @foreach ($blockVideos as $media)
+                                                            <button type="button" class="pd-media-tile" title="{{ $media->file_name }}"
+                                                                data-bs-toggle="modal" data-bs-target="#{{ $paneBase }}-modal"
+                                                                @click="video = @js($media->getUrl()); full = ''; embed = '';">
+                                                                <video src="{{ $media->getUrl() }}" preload="metadata" muted playsinline></video>
+                                                                <span class="pd-media-play"><i class="bi bi-play-fill"></i></span>
+                                                            </button>
+                                                        @endforeach
+                                                        @foreach ($videoLinkEmbeds as $embedUrl)
+                                                            <button type="button" class="pd-media-tile" title="Watch video"
+                                                                data-bs-toggle="modal" data-bs-target="#{{ $paneBase }}-modal"
+                                                                @click="embed = @js($embedUrl.(str_contains($embedUrl, '?') ? '&' : '?').'autoplay=1'); full = ''; video = '';">
+                                                                <i class="bi bi-play-btn-fill"></i>
+                                                                <span class="pd-media-play"><i class="bi bi-play-fill"></i></span>
+                                                            </button>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+                                            @endif
+
+                                            @if ($blockPdfs->isNotEmpty())
+                                                <div class="tab-pane fade {{ $blockImages->isNotEmpty() || $blockVideos->isNotEmpty() || $videoLinkEmbeds !== [] ? '' : 'show active' }}" id="{{ $paneBase }}-pdfs" role="tabpanel">
+                                                    <div class="pd-media-grid">
+                                                        @foreach ($blockPdfs as $media)
+                                                            <a href="{{ $media->getUrl() }}" target="_blank" rel="noopener"
+                                                                class="pd-media-tile pd-media-pdf" title="{{ $media->file_name }} — opens in a new tab">
+                                                                <i class="bi bi-file-earmark-pdf"></i>
+                                                                <span>{{ \Illuminate\Support\Str::limit($media->file_name, 16) }}</span>
+                                                            </a>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+                                            @endif
+                                        </div>
+
+                                        {{-- One modal per block: images enlarge here, videos (files and links) play here --}}
+                                        <div class="modal fade" id="{{ $paneBase }}-modal" tabindex="-1" aria-hidden="true"
+                                            x-init="$el.addEventListener('hide.bs.modal', () => { full = ''; video = ''; embed = ''; })">
+                                            <div class="modal-dialog modal-lg modal-dialog-centered">
+                                                <div class="modal-content">
+                                                    <div class="modal-body d-flex align-items-center justify-content-center p-2" style="background:#0b1220; min-height:220px;">
+                                                        <template x-if="full"><img :src="full" alt="" class="img-fluid" style="max-height:72vh;"></template>
+                                                        <template x-if="video"><video :src="video" controls autoplay playsinline class="w-100" style="max-height:72vh; background:#000;"></video></template>
+                                                        <template x-if="embed"><iframe :src="embed" class="w-100" style="aspect-ratio: 16 / 9; border: 0;" allow="autoplay; encrypted-media" allowfullscreen></iframe></template>
+                                                    </div>
+                                                    <div class="modal-footer py-1">
+                                                        <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Close</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
                         @endif
                     @endforeach
-
-                    @if ($unassignedPlotSizes->isNotEmpty())
-                        <div class="pd-block-card">
-                            <div class="pd-block-card-head">
-                                <h3 class="h6 mb-0">No Specific Block</h3>
-                            </div>
-                            <div class="table-responsive">
-                                <table class="table table-sm pd-plan-table mb-0">
-                                    <thead>
-                                        <tr>
-                                            <th>Size</th>
-                                            <th>Category</th>
-                                            <th>Booking</th>
-                                            <th>Installments</th>
-                                            <th>Possession</th>
-                                            <th>Total Amount</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach ($unassignedPlotSizes as $plotSize)
-                                            <tr>
-                                                <td>{{ $plotSize->label }}</td>
-                                                <td>{{ $plotSize->category ?: '—' }}</td>
-                                                <td>{{ $plotSize->booking_amount ? $currencySymbol.number_format((float) $plotSize->booking_amount) : '—' }}</td>
-                                                <td>
-                                                    @if ($plotSize->installment_amount)
-                                                        {{ $currencySymbol.number_format((float) $plotSize->installment_amount) }} &times; {{ $plotSize->installment_count }}
-                                                    @else
-                                                        —
-                                                    @endif
-                                                </td>
-                                                <td>{{ $plotSize->possession_amount ? $currencySymbol.number_format((float) $plotSize->possession_amount) : '—' }}</td>
-                                                <td>{{ $plotSize->total_price ? $currencySymbol.number_format((float) $plotSize->total_price) : '—' }}</td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    @endif
                 </div>
             </div>
         @endif
